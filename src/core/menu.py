@@ -24,7 +24,7 @@ class StartMenu:
         self.selected_index = 0
         self.items = [
             MenuItem("Normal Mode", self._start_normal_mode),
-            # More modes can be added here later
+            MenuItem("Path Finder", self._start_pathfinder_mode),
             MenuItem("Quit", self._quit_game)
         ]
         self.running = True
@@ -34,6 +34,11 @@ class StartMenu:
         """Start the game in normal (player-controlled) mode."""
         self.running = False
         self.chosen_action = "normal"
+    
+    def _start_pathfinder_mode(self):
+        """Start the game in pathfinder (AI-controlled) mode."""
+        self.running = False
+        self.chosen_action = "pathfinder"
     
     def _quit_game(self):
         """Exit the game."""
