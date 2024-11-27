@@ -48,3 +48,11 @@ class Direction(Enum):
     DOWN  = ( 0, 1)
     LEFT  = (-1, 0)
     NONE  = ( 0, 0)
+
+class CameraMode(Enum):
+    """Available camera modes for game rendering."""
+    PLAYER_FOLLOW = "player_follow"  # Camera follows player with limited view
+    FULL_MAP = "full_map"           # Shows entire game map
+
+# Camera Configuration
+CAMERA_MODE: CameraMode = CameraMode.FULL_MAP # Default mode

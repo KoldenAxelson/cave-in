@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import pygame
 from .world import GameWorld
 from .stats import Stats
-from src.utils.config import Color, WINDOW_WIDTH, WINDOW_HEIGHT, GRID_SIZE, CELL_SIZE, MARGIN, VIEW_RADIUS, SCORE_HEIGHT, GAME_WINDOW_HEIGHT
+from src.utils.config import Color, WINDOW_WIDTH, WINDOW_HEIGHT, GRID_SIZE, CELL_SIZE, MARGIN, VIEW_RADIUS, SCORE_HEIGHT, GAME_WINDOW_HEIGHT, CAMERA_MODE, CameraMode
 from src.utils.config import Position
 from src.cells.cell import Cell
 from typing import Optional, Tuple
@@ -26,7 +26,22 @@ class Renderer:
             cell: Cell object to draw, or None for empty space
         """
         if cell:
-            cell.draw(surface, screen_pos)
+            # Adjust cell drawing for full map mode
+            if CAMERA_MODE == CameraMode.FULL_MAP:
+                cell_size = min(
+                    WINDOW_WIDTH // GRID_SIZE,
+                    GAME_WINDOW_HEIGHT // GRID_SIZE
+                )
+                margin = max(1, MARGIN * cell_size // CELL_SIZE)  # Scale margin
+                rect = pygame.Rect(
+                    screen_pos[0] + margin,
+                    screen_pos[1] + margin,
+                    cell_size - (2 * margin),
+                    cell_size - (2 * margin)
+                )
+                pygame.draw.rect(surface, cell.color, rect)
+            else:
+                cell.draw(surface, screen_pos)
         else:
             self._draw_empty_cell(surface, screen_pos)
 
@@ -37,12 +52,21 @@ class Renderer:
             surface: Surface to draw on
             screen_pos: Position on screen to draw
         """
-        screen_x, screen_y = screen_pos
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            cell_size = min(
+                WINDOW_WIDTH // GRID_SIZE,
+                GAME_WINDOW_HEIGHT // GRID_SIZE
+            )
+            margin = max(1, MARGIN * cell_size // CELL_SIZE)
+        else:
+            cell_size = CELL_SIZE
+            margin = MARGIN
+            
         rect = pygame.Rect(
-            screen_x + MARGIN,
-            screen_y + MARGIN,
-            CELL_SIZE - (2 * MARGIN),
-            CELL_SIZE - (2 * MARGIN)
+            screen_pos[0] + margin,
+            screen_pos[1] + margin,
+            cell_size - (2 * margin),
+            cell_size - (2 * margin)
         )
         pygame.draw.rect(surface, Color.BLACK.value, rect)
 
@@ -58,10 +82,22 @@ class Renderer:
         """
         x, y = world_pos
         view_x, view_y = view_start
+        
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            # Calculate cell size to fit entire grid
+            cell_size = min(
+                WINDOW_WIDTH // GRID_SIZE,
+                GAME_WINDOW_HEIGHT // GRID_SIZE
+            )
+            # Center the grid
+            offset_x = (WINDOW_WIDTH - (GRID_SIZE * cell_size)) // 2
+            offset_y = (GAME_WINDOW_HEIGHT - (GRID_SIZE * cell_size)) // 2
+            return (x * cell_size + offset_x, y * cell_size + offset_y)
+            
         return ((x - view_x) * CELL_SIZE, (y - view_y) * CELL_SIZE)
 
     def _get_view_bounds(self, player_pos: Position) -> Tuple[int, int, int, int]:
-        """Calculate the visible area bounds around the player.
+        """Calculate the visible area bounds based on camera mode.
         
         Args:
             player_pos: Current player position
@@ -69,6 +105,10 @@ class Renderer:
         Returns:
             Tuple of (start_x, start_y, end_x, end_y) for visible area
         """
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            return 0, 0, GRID_SIZE, GRID_SIZE
+            
+        # Player follow mode
         px, py = player_pos
         view_start_x = px - VIEW_RADIUS
         view_start_y = py - VIEW_RADIUS
