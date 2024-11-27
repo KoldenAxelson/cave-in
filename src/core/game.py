@@ -11,6 +11,7 @@ from .renderer import Renderer
 from src.cells.player import Player
 from src.utils.input_handler import should_quit, should_restart
 from src.core.stats import Stats
+from .menu import StartMenu
 
 class GameInitError(Exception):
     """Raised when game initialization fails"""
@@ -75,12 +76,16 @@ class Game:
             raise GameInitError(f"Failed to initialize game: {e}")
 
     def run(self) -> None:
-        """Main game loop.
-        
-        Handles the core game loop that processes input, updates game state,
-        and renders each frame. Uses context manager for pygame lifecycle.
-        """
+        """Main game loop with menu integration."""
         with pygame_session():
+            # Show start menu
+            menu = StartMenu(pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT)))
+            action = menu.run()
+            
+            if action == "quit":
+                return
+            
+            # Initialize and run the game
             self._initialize_game()
             while self.running:
                 self._handle_events()
