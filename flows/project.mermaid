@@ -1,0 +1,37 @@
+graph TD
+    A[Start Game] --> B[Initialize Game]
+    B --> C[Game Loop]
+    
+    subgraph Game Loop
+        C --> D[Handle Events]
+        D --> E[Update World]
+        E --> F[Render Frame]
+        F --> C
+    end
+    
+    subgraph Handle Events
+        D --> D1[Check Quit]
+        D --> D2[Get Movement Input]
+        D --> D3[Get Action Input]
+        D --> D4[Check Restart]
+    end
+    
+    subgraph Update World
+        E --> E1[Update Player]
+        E1 --> E2[Move Player]
+        E1 --> E3[Use Items]
+        E --> E4[Check Game Over]
+    end
+    
+    subgraph Render Frame
+        F --> F1[Draw Score Section]
+        F --> F2[Draw World Grid]
+        F2 --> F3[Draw Visible Cells]
+        F --> F4{Is Game Over?}
+        F4 -->|Yes| F5[Draw Game Over Screen]
+        F4 -->|No| F6[Update Display]
+    end
+    
+    G[Game Over] --> H[Restart?]
+    H -->|Yes| B
+    H -->|No| I[Quit Game]
