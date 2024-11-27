@@ -9,7 +9,7 @@ from src.utils.config import WINDOW_HEIGHT, WINDOW_WIDTH, FPS
 from .world import GameWorld
 from .renderer import Renderer
 from src.cells.player import Player
-from src.utils.input_handler import should_quit, should_restart
+from src.utils.input_handler import should_restart
 from src.core.stats import Stats
 from src.core.menu import StartMenu
 from src.ai.pathfinding.pathfinder import PathFinder

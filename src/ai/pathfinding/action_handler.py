@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Any
 import time
-from src.cells.stick import Stick
-from src.cells.rock import Rock
+from src.cells import Stick, Rock
 from src.utils.config import Position, PLAYER_MOVE_COOLDOWN
 from src.utils.player_interface import PlayerInterface
 

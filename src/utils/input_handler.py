@@ -2,7 +2,7 @@
 import pygame
 # Local imports
 from .config import Position
-from typing import Optional, Any
+from typing import Optional
 from src.ai.ai_interface import AIInterface
 
 # Global variable for AI controller

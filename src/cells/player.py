@@ -1,6 +1,5 @@
 # Standard library imports
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 import time
 # Third-party imports
 import pygame
@@ -9,7 +8,6 @@ from .cell import Cell
 from src.utils.config import Color, CELL_SIZE, GRID_SIZE, PLAYER_MOVE_COOLDOWN
 from src.utils.config import Position, ColorType, Direction
 from src.utils.input_handler import get_movement, use_action
-from src.utils.player_interface import PlayerInterface
 
 @dataclass
 class Player(Cell):

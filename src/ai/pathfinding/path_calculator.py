@@ -1,9 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Set, Tuple, Any
 from src.utils.config import Position, Direction, GRID_SIZE, PathType
-from src.cells.stick import Stick
-from src.cells.rock import Rock
-from src.cells.cell import Cell
+from src.cells import Cell, Rock, Stick
 
 @dataclass
 class PathCalculator:

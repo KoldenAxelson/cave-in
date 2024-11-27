@@ -4,9 +4,7 @@ from typing import Dict, Optional
 import random
 from itertools import product
 # Local imports
-from src.cells.cell import Cell
-from src.cells.stick import Stick
-from src.cells.rock import Rock
+from src.cells import Cell, Stick, Rock
 from src.utils.config import GRID_SIZE, Position
 from src.core.stats import Stats
 
