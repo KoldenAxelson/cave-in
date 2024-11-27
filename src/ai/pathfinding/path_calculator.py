@@ -30,8 +30,13 @@ class PathCalculator:
         start = self.world.player.position
         return self._breadth_first_search(start, sticks)
 
-    def find_path_with_max_rocks(self, max_rocks: int) -> Optional[PathType]:
-        """Find path allowing up to N rock removals."""
+    def find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[PathType]:
+        """Find path allowing up to N rock removals to reach target position.
+        
+        Args:
+            max_rocks: Maximum number of rocks allowed in path
+            target_pos: Position we're trying to reach
+        """
         if not self.world.player:
             return None
 
@@ -42,7 +47,7 @@ class PathCalculator:
         while queue:
             current, path, removed_rocks = queue.pop(0)
             
-            if self._is_stick(current):
+            if current == target_pos:
                 return path
 
             for next_pos in self._get_valid_neighbors(current):
@@ -121,3 +126,11 @@ class PathCalculator:
     def _is_stick(self, pos: Position) -> bool:
         """Check if position contains a stick."""
         return isinstance(self.world.grid.get(pos), Stick)
+
+    def find_path_to_position(self, target_pos: Position) -> Optional[PathType]:
+        """Find shortest path to specific position ignoring rocks."""
+        if not self.world.player:
+            return None
+
+        start = self.world.player.position
+        return self._breadth_first_search(start, [target_pos])
