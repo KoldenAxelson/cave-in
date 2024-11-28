@@ -15,25 +15,13 @@ class Stick(Cell):
     color: Position = Color.BROWN.value  # Sticks are displayed as brown squares
 
     def use(self, world) -> None:
-        """Handle player interaction with the stick.
+        """Handle player interaction with the stick."""
+        # Update player's stick collection count first
+        if world.stats:
+            world.stats.sticks_collected += 1
         
-        When the player faces the stick and presses the action key,
-        this method is called to collect the stick.
-        
-        Args:
-            world: GameWorld instance containing current game state
-            
-        Effects:
-            1. Replaces this stick with an empty cell
-            2. Triggers placement of a new stick somewhere in the world
-            3. Increments the player's stick collection counter
-        """
         # Replace stick with empty cell at current position
         world.grid[self.position] = Cell(self.position)
         
-        # Generate new stick at random position
+        # Generate new stick at random position (which will place rock first if needed)
         world._place_random_stick()
-        
-        # Update player's stick collection count
-        if world.stats:
-            world.stats.sticks_collected += 1

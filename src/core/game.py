@@ -9,7 +9,7 @@ from src.utils.config import WINDOW_HEIGHT, WINDOW_WIDTH, FPS
 from .world import GameWorld
 from .renderer import Renderer
 from src.cells.player import Player
-from src.utils.input_handler import should_restart
+from src.utils.input_handler import should_restart, set_ai_controller
 from src.core.stats import Stats
 from src.core.menu import StartMenu
 from src.ai.pathfinding.pathfinder import PathFinder
@@ -71,7 +71,6 @@ class Game:
             # Set up AI if in pathfinder mode
             if self.chosen_mode == "pathfinder":
                 self.ai_controller = PathFinder(self.world)
-                from src.utils.input_handler import set_ai_controller
                 set_ai_controller(self.ai_controller)
             else:
                 set_ai_controller(None)
@@ -122,6 +121,7 @@ class Game:
             self.world.update()
             if self.world.is_board_full():
                 self.game_over = True
+
         elif should_restart():
             self._initialize_game()
             self.game_over = False

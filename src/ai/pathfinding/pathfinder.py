@@ -26,48 +26,56 @@ class PathFinder(AIInterface):
 
     def _calculate_next_path(self) -> None:
         """Calculate optimal path to nearest stick using view-radius limited pathfinding."""
-        if not (sticks := self.path_calculator.find_sticks()):
-            self._clear_paths()
-            return
-
-        if not self.world.player:
+        if not (sticks := self.path_calculator.find_sticks()) or not self.world.player:
             self._clear_paths()
             return
 
         current_pos = self.world.player.position
         target_stick = self._find_closest_stick(current_pos, sticks)
         
-        # Find best visible position towards stick
-        visible_target = self._find_best_visible_position(current_pos, target_stick)
+        # Try to find ANY walkable path to the stick (no rocks)
+        if path := self.path_calculator.find_path_without_rocks(target_stick):
+            self._set_paths(path)
+            return
         
+        print(f"WARNING: No rock-free path found to stick at {target_stick}")
+        
+        # Only if no walkable path exists, try paths with rocks
+        visible_target = self._find_best_visible_position(current_pos, target_stick)
         if not visible_target:
             self._clear_paths()
             return
-
-        # Get path to visible target
-        if not (path := self.path_calculator.find_path_to_position(visible_target)):
-            self._clear_paths()
-            return
-
-        # Check for rocks in path
-        rocks_in_path = self.path_calculator.count_rocks_in_path(path)
         
-        # If no rocks, use path directly
-        if rocks_in_path == 0:
-            self._set_paths(path)
-            return
+        # Try to find optimal path considering rocks
+        best_path = None
+        best_score = float('inf')
+        
+        # First try direct path to target
+        if path := self.path_calculator.find_path_to_position(visible_target):
+            rocks_in_path = self.path_calculator.count_rocks_in_path(path)
+            score = (STICK_VALUE * rocks_in_path) + len(path)
             
-        # Calculate score for current path
-        current_score = (STICK_VALUE * rocks_in_path) + len(path)
-        
-        # Try to find better path with fewer rocks
-        if best_path_info := self._find_best_alternative_path(rocks_in_path, visible_target):
-            if best_path_info[1] < current_score:
-                self._set_paths(best_path_info[0])
+            if rocks_in_path == 0:  # If no rocks, this is optimal
+                self._set_paths(path)
                 return
-                
-        # Use original path if no better alternative found
-        self._set_paths(path)
+            
+            best_path = path
+            best_score = score
+        
+        # Try paths with fewer rocks if initial path had rocks
+        if alternative := self._find_best_alternative_path(
+            max_rocks=self.path_calculator.count_rocks_in_path(best_path) if best_path else float('inf'),
+            target_pos=visible_target
+        ):
+            alt_path, alt_score = alternative
+            if alt_score < best_score:
+                best_path = alt_path
+                best_score = alt_score
+
+        if best_path:
+            self._set_paths(best_path)
+        else:
+            self._clear_paths()
 
     def _find_closest_stick(self, current_pos: Position, sticks: List[Position]) -> Position:
         """Find the closest stick using Manhattan distance."""
@@ -91,24 +99,22 @@ class PathFinder(AIInterface):
         return self._find_closest_valid_position(current_pos, target_direction)
 
     def _find_closest_valid_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find closest valid position to target within view radius using spiral search."""
+        """Find closest valid position to target within view radius."""
         best_pos = None
         best_distance = float('inf')
         
-        # Search in a spiral pattern from target position
-        for dist in range(VIEW_RADIUS + 1):
-            for dx in range(-dist, dist + 1):
-                for dy in [-dist, dist]:
-                    check_pos = (target_pos[0] + dx, target_pos[1] + dy)
-                    if self._is_valid_check_position(current_pos, check_pos):
-                        dist_to_target = self.manhattan_distance(check_pos, target_pos)
-                        if dist_to_target < best_distance:
-                            best_distance = dist_to_target
-                            best_pos = check_pos
-            
-            if best_pos:  # Found valid position at this radius
-                break
+        # Search all positions within view radius
+        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
                 
+                # Check if position is valid and within view radius
+                if self._is_valid_check_position(current_pos, check_pos):
+                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
+                    if dist_to_target < best_distance:
+                        best_distance = dist_to_target
+                        best_pos = check_pos
+        
         return best_pos
 
     def _is_valid_check_position(self, current_pos: Position, check_pos: Position) -> bool:
@@ -131,13 +137,20 @@ class PathFinder(AIInterface):
         best_path = None
         best_score = float('inf')
 
-        for allowed_rocks in range(max_rocks):
-            if path := self.path_calculator.find_path_with_max_rocks(allowed_rocks, target_pos):
-                score = (STICK_VALUE * allowed_rocks) + len(path)
-                
+        # Binary search for optimal rock count
+        left, right = 0, max_rocks
+        while left <= right:
+            mid = (left + right) // 2
+            if path := self.path_calculator.find_path_with_max_rocks(mid, target_pos):
+                score = (STICK_VALUE * mid) + len(path)
                 if score < best_score:
                     best_score = score
                     best_path = path
+                # If path exists with this many rocks, try fewer
+                right = mid - 1
+            else:
+                # If no path exists with this few rocks, try more
+                left = mid + 1
 
         return (best_path, best_score) if best_path else None
 
@@ -203,3 +216,23 @@ class PathFinder(AIInterface):
     def manhattan_distance(pos1: Position, pos2: Position) -> int:
         """Calculate Manhattan distance between two positions."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+    def _find_closest_walkable_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
+        """Find closest position that doesn't contain a rock within view radius."""
+        best_pos = None
+        best_distance = float('inf')
+        
+        # Search all positions within view radius
+        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
+                
+                # Check if position is valid, within view radius, and not a rock
+                if (self._is_valid_check_position(current_pos, check_pos) and 
+                    not isinstance(self.world.grid.get(check_pos), Rock)):
+                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
+                    if dist_to_target < best_distance:
+                        best_distance = dist_to_target
+                        best_pos = check_pos
+        
+        return best_pos

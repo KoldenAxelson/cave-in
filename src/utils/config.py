@@ -44,7 +44,7 @@ class CameraMode(Enum):
 # Game Configuration
 FPS:           int = 60
 CELL_SIZE:     int = 30
-GRID_SIZE:     int = 20
+GRID_SIZE:     int = 10
 MARGIN:        int = 3
 VIEW_RADIUS:   int = 4
 PLAYER_MOVE_COOLDOWN: float = 0.02
@@ -58,4 +58,6 @@ GAME_WINDOW_HEIGHT: int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE
 WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  
 
 # AI Configuration
-STICK_VALUE = GRID_SIZE * 2
+STICK_VALUE = GRID_SIZE
+
+# Global Mutables

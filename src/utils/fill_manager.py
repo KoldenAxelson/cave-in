@@ -9,76 +9,57 @@ class FillManager:
     
     def is_safe_rock_position(self, world, pos: Position) -> bool:
         """Check if placing a rock at position won't create inaccessible areas."""
-        # Quick rejection: if position has 7+ rock neighbors, it's safe
-        if self._count_rock_neighbors(world, pos) >= 7:
-            return True
-            
+        if not world.player:
+            return False
+
         # Create grid representation with the proposed rock
         grid = self._create_grid(world, pos)
         
-        if not world.player:
-            return False
-            
-        # Find all connected regions
-        regions = self._find_connected_regions(grid, world.player.position)
+        # Find all connected regions from player's position
+        regions = self._find_connected_regions(grid, world.player.position, world)
         
         # If there's only one region, all reachable cells are connected
-        if len(regions) == 1:
-            return True
+        return len(regions) == 1
+
+    def _find_connected_regions(self, grid, start_pos: Position, world) -> List[Set[Position]]:
+        """Find all connected regions accessible from the start position."""
+        def can_move_to(pos: Position) -> bool:
+            # Check grid bounds
+            if not (0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE):
+                return False
+            # Consider both existing rocks and the proposed rock position
+            return grid[pos]  # grid from _create_grid has True for walkable positions
+
+        def flood_fill(pos: Position, visited: Set[Position]) -> Set[Position]:
+            if pos in visited or not can_move_to(pos):
+                return set()
             
-        # Check if any region contains both a stick and an empty cell
-        for region in regions:
-            has_stick = False
-            has_empty = False
-            for pos in region:
-                cell = world.grid.get(pos)
-                if isinstance(cell, Stick):
-                    has_stick = True
-                elif type(cell) == Cell:
-                    has_empty = True
-                if has_stick and has_empty:
-                    return False
-        return True
+            region = {pos}
+            visited.add(pos)
+            
+            for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                next_pos = (pos[0] + dx, pos[1] + dy)
+                region.update(flood_fill(next_pos, visited))
+            
+            return region
 
-    def _count_rock_neighbors(self, world, pos: Position) -> int:
-        """Count number of rock neighbors (including diagonals)."""
-        x, y = pos
-        count = 0
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-                check_pos = (x + dx, y + dy)
-                if self._is_valid_position(check_pos):
-                    cell = world.grid.get(check_pos)
-                    if isinstance(cell, Rock):
-                        count += 1
-        return count
-
-    def _find_connected_regions(self, grid: Dict[Position, bool], start: Position) -> List[Set[Position]]:
-        """Find all connected regions of walkable cells using flood fill."""
-        unvisited = {pos for pos, walkable in grid.items() if walkable}
+        visited = set()
         regions = []
         
-        while unvisited:
-            region = set()
-            to_visit = [next(iter(unvisited))]
-            
-            while to_visit:
-                current = to_visit.pop()
-                if current not in unvisited:
-                    continue
+        # Start with player's region
+        player_region = flood_fill(start_pos, visited)
+        if player_region:
+            regions.append(player_region)
+        
+        # Find any other disconnected regions
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
+                pos = (x, y)
+                if pos not in visited and can_move_to(pos):
+                    region = flood_fill(pos, visited)
+                    if region:
+                        regions.append(region)
                     
-                unvisited.remove(current)
-                region.add(current)
-                x, y = current
-                
-                for next_pos in [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]:
-                    if next_pos in unvisited and grid.get(next_pos, False):
-                        to_visit.append(next_pos)
-                        
-            regions.append(region)
-            
         return regions
 
     def _create_grid(self, world, rock_pos: Position) -> Dict[Position, bool]:
@@ -88,12 +69,4 @@ class FillManager:
             for x in range(GRID_SIZE)
             for y in range(GRID_SIZE)
         }
-
-    def _is_valid_position(self, pos: Position) -> bool:
-        """Check if position is within grid bounds."""
-        x, y = pos
-        return 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE
     
-    def clear_cache(self) -> None:
-        """Clear the cache of verified positions."""
-        self.verified_positions.clear() 

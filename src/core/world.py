@@ -22,6 +22,7 @@ class GameWorld:
     player: Optional[Cell] = None  # Reference to player object
     stats: Optional[Stats] = None  # Reference to game statistics
     fill_manager: FillManager = field(default_factory=FillManager)
+    difficulty: Difficulty = DIFFICULTY
 
     def __post_init__(self) -> None:
         """Initialize the game grid after dataclass initialization.
@@ -47,35 +48,34 @@ class GameWorld:
         if not empty_positions:
             return
 
-        if DIFFICULTY == Difficulty.EASY:
-            # Try positions until we find a safe one
-            random.shuffle(empty_positions)
+        # In NORMAL mode, just place randomly
+        if self.difficulty == Difficulty.NORMAL:
+            if random.random() < DIFFICULTY.value:  # Make sure we're still using the difficulty chance
+                rock_pos = random.choice(empty_positions)
+                self.grid[rock_pos] = Rock(rock_pos)
+        # In EASY mode, use fill manager to validate placement
+        else:
+            random.shuffle(empty_positions)  # Randomize the order we try positions
             for pos in empty_positions:
                 if self.fill_manager.is_safe_rock_position(self, pos):
                     self.grid[pos] = Rock(pos)
-                    return
-        else:
-            # Normal difficulty - place rock randomly
-            rock_pos = random.choice(empty_positions)
-            self.grid[rock_pos] = Rock(rock_pos)
+                    break
 
     def _place_random_stick(self) -> None:
-        """Place a collectible stick at a random empty position in the grid.
+        """Place a collectible stick at a random empty position in the grid."""
+        # First place a rock
+        self._place_random_rock()
         
-        Finds all empty cells in the grid and randomly selects one
-        to place a new stick. Also triggers rock placement to maintain
-        game balance.
-        """
-        # Get list of all positions containing only basic cells
+        # Then find remaining empty positions for stick
         empty_positions = [
             pos for pos, cell in self.grid.items()
             if type(cell) == Cell
         ]
-        # Place stick and rock if there are empty positions
+        
+        # Place stick if there are empty positions
         if empty_positions:
             stick_pos = random.choice(empty_positions)
             self.grid[stick_pos] = Stick(stick_pos)
-            self._place_random_rock()  # Place rock with each stick
 
     def add(self, cell: Cell) -> None:
         """Add a cell to the game grid at its specified position.

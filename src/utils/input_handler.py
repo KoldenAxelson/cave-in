@@ -5,8 +5,9 @@ from .config import Position
 from typing import Optional
 from src.ai.ai_interface import AIInterface
 
-# Global variable for AI controller
+# Global variables
 ai_controller: Optional[AIInterface] = None
+previous_space_pressed: bool = False  # Track previous space bar state
 
 def set_ai_controller(controller: Optional[AIInterface]) -> None:
     """Set or clear the AI controller."""
@@ -18,11 +19,7 @@ def should_quit(event: pygame.event.Event) -> bool:
     return event.type == pygame.QUIT
 
 def get_movement() -> Position:
-    """Get movement input from keyboard or AI.
-    
-    Returns:
-        Position: (dx, dy) tuple representing movement direction
-    """
+    """Get movement input from keyboard or AI."""
     if ai_controller:
         return ai_controller.get_movement()
     
@@ -41,12 +38,23 @@ def use_action() -> bool:
     """Check if action should be taken (from keyboard or AI).
     
     Returns:
-        bool: True if action key is pressed or AI wants to take action
+        bool: True if action key is newly pressed or AI wants to take action
     """
+    global previous_space_pressed
+    
     if ai_controller:
         return ai_controller.should_use_action()
     
-    return pygame.key.get_pressed()[pygame.K_SPACE]
+    # Get current space bar state
+    current_space_pressed = pygame.key.get_pressed()[pygame.K_SPACE]
+    
+    # Only return True if space is currently pressed but wasn't previously
+    action_triggered = current_space_pressed and not previous_space_pressed
+    
+    # Update previous state for next frame
+    previous_space_pressed = current_space_pressed
+    
+    return action_triggered
 
 def should_restart() -> bool:
     """Check if the restart key (ESC) is pressed."""

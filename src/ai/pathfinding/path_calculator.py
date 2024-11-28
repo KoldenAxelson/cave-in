@@ -25,28 +25,38 @@ class PathCalculator:
         if not self.world.player or not (sticks := self.find_sticks()):
             return None
 
-        start = self.world.player.position
-        return self._breadth_first_search(start, sticks)
+        shortest_path = None
+        shortest_length = float('inf')
+        
+        for stick_pos in sticks:
+            if path := self.find_path_with_max_rocks(float('inf'), stick_pos):
+                if len(path) < shortest_length:
+                    shortest_path = path
+                    shortest_length = len(path)
+                
+        return shortest_path
 
     def find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[PathType]:
-        """Find path allowing up to N rock removals to reach target position.
-        
-        Args:
-            max_rocks: Maximum number of rocks allowed in path
-            target_pos: Position we're trying to reach
-        """
+        """Find optimal path allowing up to N rock removals to reach target position."""
         if not self.world.player:
             return None
 
         start = self.world.player.position
         queue: List[Tuple[Position, PathType, Set[Position]]] = [(start, [start], set())]
         visited = {(start, tuple())}
+        best_path = None
+        best_length = float('inf')
 
         while queue:
             current, path, removed_rocks = queue.pop(0)
             
+            if len(path) >= best_length:
+                continue
+            
             if current == target_pos:
-                return path
+                best_path = path
+                best_length = len(path)
+                continue
 
             for next_pos in self._get_valid_neighbors(current):
                 new_removed = removed_rocks.copy()
@@ -61,7 +71,7 @@ class PathCalculator:
                     visited.add(state)
                     queue.append((next_pos, path + [next_pos], new_removed))
 
-        return None
+        return best_path
 
     def count_rocks_in_path(self, path: PathType) -> int:
         """Count number of rocks in a given path."""
@@ -132,3 +142,25 @@ class PathCalculator:
 
         start = self.world.player.position
         return self._breadth_first_search(start, [target_pos])
+
+    def find_path_without_rocks(self, target_pos: Position) -> Optional[List[Position]]:
+        """Find any path to target that doesn't include rocks."""
+        if not self.world.player:
+            return None
+        
+        start = self.world.player.position
+        queue = [(start, [start])]
+        visited = {start}
+        
+        while queue:
+            current, path = queue.pop(0)
+            if current == target_pos:
+                return path
+            
+            for next_pos in self._get_valid_neighbors(current):
+                if (next_pos not in visited and 
+                    not isinstance(self.world.grid.get(next_pos), Rock)):
+                    visited.add(next_pos)
+                    queue.append((next_pos, path + [next_pos]))
+                
+        return None
