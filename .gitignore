@@ -32,3 +32,6 @@ ENV/
 
 # Project specific
 proposed_changes.md
+
+# MacOS
+.DS_Store
