@@ -20,11 +20,9 @@ class GameInitError(Exception):
 
 @contextmanager
 def pygame_session():
-    """Context manager for handling pygame initialization and cleanup.
-    
-    Ensures pygame is properly initialized at the start and cleaned up
-    when the game exits, even if an error occurs.
-    """
+    """Manages the lifecycle of pygame, ensuring proper initialization and cleanup.
+    Uses a context manager pattern to guarantee pygame.quit() is called even if
+    exceptions occur."""
     pygame.init()
     try:
         yield
@@ -33,11 +31,9 @@ def pygame_session():
 
 @dataclass
 class Game:
-    """Main game class that coordinates all game systems.
-    
-    Handles initialization, game loop, event processing, updates,
-    and rendering. Acts as the central coordinator for all game components.
-    """
+    """Central game coordinator that manages all game systems and state.
+    Handles the game lifecycle including initialization, main loop execution,
+    and cleanup while coordinating between different game components."""
     # Game state flags
     running:   bool                       = True   # Controls main game loop
     game_over: bool                       = False  # Tracks if game has ended
@@ -51,55 +47,87 @@ class Game:
     stats:    Optional[Stats]             = None   # Game statistics
     ai_controller: Optional[Any] = None  # AI controller
     
-    def _initialize_game(self) -> None:
-        """Initialize or reset all game components."""
-        try:
-            # Create core game components
-            self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-            self.clock = pygame.time.Clock()
-            self.world = GameWorld()
-            self.renderer = Renderer(self.screen)
-            self.player = Player()
-            self.stats = Stats()
-
-            # Set up game window and connect components
-            pygame.display.set_caption("Cave In")
-            self.world.player = self.player
-            self.world.stats = self.stats
-            self.world.add(self.player)
-
-            # Set up AI if in pathfinder mode
-            if self.chosen_mode == "pathfinder":
-                self.ai_controller = PathFinder(self.world)
-                set_ai_controller(self.ai_controller)
-            else:
-                set_ai_controller(None)
-                
-        except pygame.error as e:
-            raise GameInitError(f"Failed to initialize game: {e}")
-
-    def set_ai_controller(self, controller) -> None:
-        """Set the AI controller for the game."""
-        self.ai_controller = controller
-
+    # Public Methods
     def run(self) -> None:
-        """Main game loop with menu integration."""
+        """Executes the complete game lifecycle from menu to gameplay.
+        Controls the high-level flow of the game including menu display,
+        initialization, and main loop execution."""
         with pygame_session():
-            menu = StartMenu(pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT)))
-            self.chosen_mode = menu.run()
-            
-            if self.chosen_mode == "quit":
+            if not self._handle_menu():
                 return
             
             self._initialize_game()
-            
-            while self.running:
-                self._handle_events()
-                self.world.update()
-                self._render()
+            self._main_loop()
 
+    def set_ai_controller(self, controller) -> None:
+        """Assigns a new AI controller to the game instance.
+        Allows dynamic switching of AI behavior during gameplay."""
+        self.ai_controller = controller
+
+    # Private methods supporting run()
+    def _handle_menu(self) -> bool:
+        """Manages the start menu interaction flow.
+        Creates and runs the menu interface, capturing the player's
+        chosen game mode."""
+        menu = StartMenu(pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT)))
+        self.chosen_mode = menu.run()
+        return self.chosen_mode != "quit"
+
+    def _initialize_game(self) -> None:
+        """Prepares the game environment for a new session.
+        Sets up all necessary game components and their relationships,
+        handling any initialization errors that occur."""
+        try:
+            self._create_core_components()
+            self._setup_window()
+            self._configure_ai()
+        except pygame.error as e:
+            raise GameInitError(f"Failed to initialize game: {e}")
+
+    def _main_loop(self) -> None:
+        """Drives the core game loop.
+        Continuously processes events, updates game state, and renders
+        the game world until the game ends."""
+        while self.running:
+            self._handle_events()
+            self.world.update()
+            self._render()
+
+    # Initialize helpers
+    def _create_core_components(self) -> None:
+        """Instantiates essential game objects.
+        Creates the foundational components needed for the game to run
+        including display, timing, world, and player elements."""
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.world = GameWorld()
+        self.renderer = Renderer(self.screen)
+        self.player = Player()
+        self.stats = Stats()
+
+    def _setup_window(self) -> None:
+        """Configures the game window and establishes component relationships.
+        Sets up the display window and connects the player and stats
+        to the game world."""
+        pygame.display.set_caption("Cave In")
+        self.world.player = self.player
+        self.world.stats = self.stats
+        self.world.add(self.player)
+
+    def _configure_ai(self) -> None:
+        """Initializes the appropriate AI controller.
+        Sets up AI behavior based on the selected game mode from the menu."""
+        if self.chosen_mode == "pathfinder":
+            self.ai_controller = PathFinder(self.world)
+            set_ai_controller(self.ai_controller)
+        else:
+            set_ai_controller(None)
+
+    # Game loop helpers
     def _handle_events(self) -> None:
-        """Process all pending pygame events."""
+        """Processes game events and user input.
+        Manages quit events and handles game restart requests, reinitializing
+        the game when needed."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -110,27 +138,20 @@ class Game:
             self.game_over = False
 
     def _update(self) -> None:
-        """Update game state for the current frame.
-        
-        Handles:
-        - World updates during normal gameplay
-        - Game over condition checking
-        - Game restart when requested
-        """
+        """Updates the game state.
+        Manages world updates and checks for game-over conditions,
+        handling restart requests when appropriate."""
         if not self.game_over:
             self.world.update()
             if self.world.is_board_full():
                 self.game_over = True
-
         elif should_restart():
             self._initialize_game()
             self.game_over = False
 
     def _render(self) -> None:
-        """Render the current game state.
-        
-        Delegates rendering to the renderer component and maintains
-        consistent frame timing.
-        """
+        """Handles game rendering and frame timing.
+        Updates the display with the current game state and maintains
+        consistent frame rate."""
         self.renderer.render(self.world)
-        self.clock.tick(FPS)  # Control game speed
+        self.clock.tick(FPS)

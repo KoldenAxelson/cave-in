@@ -8,48 +8,44 @@ from src.utils.config import Position, ColorType, Color, CameraMode
 
 @dataclass
 class Cell:
-    """Base class for all grid cells in the game.
+    """Base class for all grid cells in the game world.
+    Provides core functionality for position tracking, drawing, and interaction."""
     
-    This class serves as the foundation for all cell types (Player, Rock, Stick).
-    It provides basic functionality for position tracking, drawing, and interaction.
-    """
-    position: Position  # Tuple of (x, y) coordinates in the game grid
-    color: ColorType = Color.D_GRAY.value  # RGB color tuple, defaults to dark gray
+    # Core Attributes
+    position: Position  # (x, y) coordinates in the game grid
+    color: ColorType = Color.D_GRAY.value  # RGB color tuple for cell rendering
 
+    # Public Methods - Game Logic
     def update(self, world) -> None:
-        """Update the cell's state for the current frame.
-        
-        Args:
-            world: GameWorld instance containing the current game state
-            
-        Note:
-            Base implementation does nothing. Subclasses should override
-            this method if they need frame-by-frame updates.
-        """
+        """Updates the cell's state for the current frame.
+        Base implementation does nothing - subclasses override for specific behavior."""
         pass
 
+    def use(self, world) -> None:
+        """Handles interaction when the player activates this cell.
+        Base implementation does nothing - subclasses override for specific behavior."""
+        pass
+
+    # Public Methods - Rendering
     def draw(self, surface: pygame.Surface, screen_pos: Position, cell_size: int, margin: int) -> None:
-        """Draw the cell on the given surface at the specified position."""
+        """Renders the cell on the game surface at the specified screen position.
+        Handles margin calculations and delegates actual drawing."""
+        rect = self._create_cell_rect(screen_pos, cell_size, margin)
+        self._draw_cell_rect(surface, rect)
+
+    # Private Methods - Rendering Helpers
+    def _create_cell_rect(self, screen_pos: Position, cell_size: int, margin: int) -> pygame.Rect:
+        """Creates a pygame Rect for the cell with proper margins.
+        Calculates dimensions to ensure consistent spacing between cells."""
         screen_x, screen_y = screen_pos
-        
-        # Create rectangle with margins applied
-        rect = pygame.Rect(
+        return pygame.Rect(
             screen_x + margin,
             screen_y + margin,
             cell_size - (2 * margin),
             cell_size - (2 * margin)
         )
-        pygame.draw.rect(surface, self.color, rect)
 
-    def use(self, world) -> None:
-        """Handle interaction when the player uses/activates this cell.
-        
-        Args:
-            world: GameWorld instance containing the current game state
-            
-        Note:
-            Base implementation does nothing. Subclasses should override
-            this method to implement their specific interaction behavior
-            (e.g., Stick collection, Rock removal).
-        """
-        pass
+    def _draw_cell_rect(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+        """Renders the cell's rectangle using its color attribute.
+        Handles the actual pygame drawing operation."""
+        pygame.draw.rect(surface, self.color, rect)

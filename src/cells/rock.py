@@ -6,29 +6,30 @@ from src.utils.config import Color, ColorType
 
 @dataclass
 class Rock(Cell):
-    """Represents a rock obstacle in the game.
+    """Represents a rock obstacle in the game world.
     
-    Inherits from Cell class and represents a destructible obstacle
-    that can be removed by spending a collected stick.
-    """
+    A destructible obstacle that can be removed by spending a collected stick.
+    Inherits from Cell class and overrides interaction behavior."""
+    
+    # Core Attributes
     color: ColorType = Color.GRAY.value  # Rocks are displayed as gray squares
 
+    # Public Methods - Interaction
     def use(self, world) -> None:
-        """Handle player interaction with the rock.
-        
-        When the player faces the rock and presses the action key,
-        this method is called to attempt rock removal.
-        
-        Args:
-            world: GameWorld instance containing current game state
-            
-        Note:
-            - Only removes the rock if the player has at least one stick
-            - Consumes one stick when removing the rock
-            - Replaces the rock with an empty cell when removed
-        """
-        # Check if stats exist and player has sticks to use
-        if world.stats and world.stats.sticks_collected > 0:
-            world.stats.sticks_collected -= 1  # Consume one stick
-            # Replace rock with empty cell
-            world.grid[self.position] = Cell(self.position)
+        """Handles player interaction with the rock.
+        Checks if removal is possible and executes if conditions are met."""
+        if self._can_remove_rock(world):
+            self._remove_rock(world)
+
+    # Private Methods - Rock Removal Logic
+    def _can_remove_rock(self, world) -> bool:
+        """Validates if the rock can be removed.
+        Requires game stats to exist and at least one stick to be collected."""
+        return world.stats and world.stats.sticks_collected > 0
+
+    def _remove_rock(self, world) -> None:
+        """Executes the rock removal process.
+        Consumes one stick and replaces rock with an empty cell."""
+        world.stats.sticks_collected -= 1  # Consume one stick
+        # Replace rock with empty cell
+        world.grid[self.position] = Cell(self.position)
