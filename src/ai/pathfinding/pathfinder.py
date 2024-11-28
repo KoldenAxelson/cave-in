@@ -20,6 +20,7 @@ class PathFinder(AIInterface):
     action_handler: ActionHandler = None        # Manages action decisions
     current_path: List[Position] = None         # Current path being followed
     player: PlayerInterface = None              # Interface to player state
+    last_movement: Position = None              # Tracks last movement direction
 
     # Initialization
     def __post_init__(self):
@@ -28,6 +29,7 @@ class PathFinder(AIInterface):
         self.action_handler = ActionHandler(self.world)
         self.current_path = []
         self.player = PlayerInterface(self.world)
+        self.last_movement = Direction.NONE.value  # Initialize with no movement
         self._calculate_next_path()
 
     # Public Methods - AI Interface Implementation
@@ -166,21 +168,14 @@ class PathFinder(AIInterface):
                 bool(sticks := self.path_calculator.find_sticks()))
 
     def _find_closest_stick(self) -> Optional[Position]:
-        """Find closest stick using Manhattan distance.
-        Returns None if no sticks are available."""
+        """Find closest stick using Manhattan distance."""
         if not self.world.player:
             return None
         sticks = self.path_calculator.find_sticks()
         if not sticks:
             return None
-        return min(sticks, key=lambda pos: self.manhattan_distance(self.world.player.position, pos))
-
-    # Utility Methods
-    @staticmethod
-    def manhattan_distance(pos1: Position, pos2: Position) -> int:
-        """Calculate Manhattan distance between two positions.
-        Used for finding closest sticks."""
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+        player_pos = self.world.player.position
+        return min(sticks, key=lambda pos: abs(pos[0] - player_pos[0]) + abs(pos[1] - player_pos[1]))
 
     # Private Methods - Position Calculations
     def _normalize_vector(self, dx: int, dy: int) -> Tuple[float, float]:
@@ -194,11 +189,58 @@ class PathFinder(AIInterface):
         """Check if a position is valid for pathfinding and within view radius."""
         if not self._is_valid_position(check_pos):
             return False
-        return self.manhattan_distance(current_pos, check_pos) <= VIEW_RADIUS
+        dx = abs(current_pos[0] - check_pos[0])
+        dy = abs(current_pos[1] - check_pos[1])
+        return dx + dy <= VIEW_RADIUS
 
     def _score_position(self, pos: Position, target_pos: Position) -> float:
-        """Score a position based on progress toward target."""
-        return self.manhattan_distance(pos, target_pos)
+        """Score position based on progress toward target and path safety."""
+        progress_score = abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1])
+        direction_alignment = self._calculate_direction_alignment(pos, target_pos)
+        rock_density = self._calculate_local_rock_density(pos)
+        
+        return progress_score * (1 - direction_alignment * 0.3) * (1 + rock_density * 0.5)
+
+    def _calculate_direction_alignment(self, pos: Position, target_pos: Position) -> float:
+        """Calculate how well aligned a position is with the target direction.
+        Returns value between 0 (poor alignment) and 1 (perfect alignment)."""
+        if pos == target_pos:
+            return 1.0
+            
+        # Get vector to target
+        dx = target_pos[0] - pos[0]
+        dy = target_pos[1] - pos[1]
+        
+        # Normalize vector
+        target_vector = self._normalize_vector(dx, dy)
+        
+        # Get current movement direction if available
+        if hasattr(self, 'last_movement'):
+            current_vector = self._normalize_vector(self.last_movement[0], self.last_movement[1])
+            # Calculate dot product for direction similarity
+            dot_product = (target_vector[0] * current_vector[0] + 
+                         target_vector[1] * current_vector[1])
+            # Convert from [-1, 1] to [0, 1] range
+            return (dot_product + 1) / 2
+        
+        return 0.5  # Neutral alignment if no current direction
+
+    def _calculate_local_rock_density(self, pos: Position) -> float:
+        """Calculate density of rocks in the immediate vicinity.
+        Returns value between 0 (no rocks) and 1 (surrounded by rocks)."""
+        rocks_count = 0
+        checked_cells = 0
+        
+        # Check 5x5 area centered on position
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                check_pos = (pos[0] + dx, pos[1] + dy)
+                if self._is_valid_position(check_pos):
+                    checked_cells += 1
+                    if isinstance(self.world.grid.get(check_pos), Rock):
+                        rocks_count += 1
+        
+        return rocks_count / checked_cells if checked_cells > 0 else 0
 
     def _calculate_scan_vectors(self, current_pos: Position, target_pos: Position) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         """Calculate primary and secondary vectors for scanning."""
@@ -270,3 +312,14 @@ class PathFinder(AIInterface):
                 left = mid + 1
 
         return (best_path, best_score) if best_path else None
+
+    # Private Methods - Movement Tracking
+    def _update_movement_history(self, movement: Position) -> None:
+        """Track the last movement direction for path scoring."""
+        self.last_movement = movement
+
+    def update(self, world) -> None:
+        """Update pathfinder state and track movement."""
+        super().update(world)
+        if movement := self.get_movement():
+            self._update_movement_history(movement)

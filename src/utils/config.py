@@ -74,7 +74,7 @@ WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  # Total window heig
 # AI Configuration
 # --------------
 # Settings for AI behavior
-STICK_VALUE: int = GRID_SIZE  # Value assigned to sticks for AI pathfinding
+STICK_VALUE: int = GRID_SIZE // 2  # Value assigned to sticks for AI pathfinding
 
 # Global Mutables
 # --------------
