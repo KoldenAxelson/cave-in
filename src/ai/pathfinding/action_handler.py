@@ -74,8 +74,6 @@ class ActionHandler:
         can_remove = (self.world.stats and 
                     self.world.stats.sticks_collected > 0 and 
                     target_pos in self.current_path)
-        if can_remove:
-            print(f"WARNING: About to remove rock at {target_pos}")
         return can_remove
 
     # Private Methods - Action Decision Logic

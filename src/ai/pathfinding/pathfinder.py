@@ -78,8 +78,6 @@ class PathFinder(AIInterface):
             self._set_paths(path)
             return
         
-        print(f"WARNING: No rock-free path found to stick at {target_stick}")
-        
         visible_target = self._find_best_visible_position(self.world.player.position, target_stick)
         if not visible_target:
             self._clear_paths()
@@ -184,21 +182,28 @@ class PathFinder(AIInterface):
         Used for finding closest sticks."""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
+    # Private Methods - Position Calculations
     def _find_best_visible_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
         """Find best position within view radius considering path quality."""
-        # Calculate direction vector
+        if self._is_within_view_radius(current_pos, target_pos):
+            return target_pos
+            
         dx = target_pos[0] - current_pos[0]
         dy = target_pos[1] - current_pos[1]
         
-        # Normalize to largest step within VIEW_RADIUS
         max_delta = max(abs(dx), abs(dy))
         if max_delta > 0:
             scale = min(VIEW_RADIUS, max_delta) / max_delta
             dx = int(dx * scale)
             dy = int(dy * scale)
         
-        # Calculate best position in direction of target
         target_direction = (current_pos[0] + dx, current_pos[1] + dy)
+        
+        # Try to find a walkable position first
+        if walkable_pos := self._find_closest_walkable_position(current_pos, target_direction):
+            return walkable_pos
+            
+        # Fall back to any valid position if no walkable path exists
         return self._find_closest_valid_position(current_pos, target_direction)
 
     def _find_closest_valid_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
@@ -206,13 +211,29 @@ class PathFinder(AIInterface):
         best_pos = None
         best_distance = float('inf')
         
-        # Search all positions within view radius
         for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
             for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
                 check_pos = (target_pos[0] + dx, target_pos[1] + dy)
                 
-                # Check if position is valid and within view radius
                 if self._is_valid_check_position(current_pos, check_pos):
+                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
+                    if dist_to_target < best_distance:
+                        best_distance = dist_to_target
+                        best_pos = check_pos
+        
+        return best_pos
+
+    def _find_closest_walkable_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
+        """Find closest position that doesn't contain a rock within view radius."""
+        best_pos = None
+        best_distance = float('inf')
+        
+        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
+                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
+                
+                if (self._is_valid_check_position(current_pos, check_pos) and 
+                    not isinstance(self.world.grid.get(check_pos), Rock)):
                     dist_to_target = self.manhattan_distance(check_pos, target_pos)
                     if dist_to_target < best_distance:
                         best_distance = dist_to_target
@@ -225,7 +246,7 @@ class PathFinder(AIInterface):
         if not self._is_valid_position(check_pos):
             return False
         
-        return self.manhattan_distance(current_pos, check_pos) <= VIEW_RADIUS
+        return self._is_within_view_radius(current_pos, check_pos)
 
     def _is_valid_position(self, pos: Position) -> bool:
         """Check if a position is valid (in bounds and walkable)."""
@@ -249,30 +270,12 @@ class PathFinder(AIInterface):
                 if score < best_score:
                     best_score = score
                     best_path = path
-                # If path exists with this many rocks, try fewer
                 right = mid - 1
             else:
-                # If no path exists with this few rocks, try more
                 left = mid + 1
 
         return (best_path, best_score) if best_path else None
 
-    def _find_closest_walkable_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find closest position that doesn't contain a rock within view radius."""
-        best_pos = None
-        best_distance = float('inf')
-        
-        # Search all positions within view radius
-        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
-                
-                # Check if position is valid, within view radius, and not a rock
-                if (self._is_valid_check_position(current_pos, check_pos) and 
-                    not isinstance(self.world.grid.get(check_pos), Rock)):
-                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
-                    if dist_to_target < best_distance:
-                        best_distance = dist_to_target
-                        best_pos = check_pos
-        
-        return best_pos
+    def _is_within_view_radius(self, pos1: Position, pos2: Position) -> bool:
+        """Check if two positions are within view radius of each other."""
+        return self.manhattan_distance(pos1, pos2) <= VIEW_RADIUS

@@ -1,0 +1,56 @@
+flowchart TD
+    Start([Start Pathfinding]) --> ValidState{Has valid state?}
+    ValidState -- No --> ClearPath[Clear current path]
+    ValidState -- Yes --> FindStick[Find closest stick]
+    
+    FindStick --> StickFound{Stick found?}
+    StickFound -- No --> ClearPath
+    StickFound -- Yes --> TryRockFreePath[Try path without rocks]
+    
+    TryRockFreePath --> RockFreePath{Path found?}
+    RockFreePath -- Yes --> SetPath[Set current path]
+    RockFreePath -- No --> FindVisible[Find best visible position]
+    
+    FindVisible --> VisibleFound{Position found?}
+    VisibleFound -- No --> ClearPath
+    VisibleFound -- Yes --> DirectPath[Try direct path]
+    
+    DirectPath --> PathFound{Path found?}
+    PathFound -- No --> ClearPath
+    PathFound -- Yes --> ScorePath[Score path based on rocks and length]
+    
+    ScorePath --> HasRocks{Contains rocks?}
+    HasRocks -- No --> SetPath
+    HasRocks -- Yes --> TryAlternative[Try alternative paths with fewer rocks]
+    
+    TryAlternative --> BetterFound{Better score found?}
+    BetterFound -- Yes --> SetPath
+    BetterFound -- No --> UseOriginal[Use original path]
+    
+    UseOriginal --> SetPath
+    
+    SetPath --> End([End Pathfinding])
+    ClearPath --> End
+
+    subgraph "Path Optimization"
+        DirectPath
+        PathFound
+        ScorePath
+        HasRocks
+        TryAlternative
+        BetterFound
+        UseOriginal
+    end
+
+    subgraph "Initial Path Finding"
+        ValidState
+        FindStick
+        StickFound
+        TryRockFreePath
+        RockFreePath
+    end
+
+    subgraph "Visibility Handling"
+        FindVisible
+        VisibleFound
+    end 
