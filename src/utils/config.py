@@ -7,24 +7,6 @@ ColorType: TypeAlias = Tuple[int, int, int]
 PathType = List[Position]
 VisitedType = Set[Tuple[Position, Tuple[Position, ...]]] 
 
-# Game Configuration
-FPS:           int = 60
-CELL_SIZE:     int = 30
-GRID_SIZE:     int = 10
-MARGIN:        int = 3
-VIEW_RADIUS:   int = 4
-PLAYER_MOVE_COOLDOWN: float = 0.02
-
-# Window Configuration
-SCORE_HEIGHT:       int = 50  
-WINDOW_WIDTH:       int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE
-GAME_WINDOW_HEIGHT: int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE  
-WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  
-
-# AI Configuration
-STICK_VALUE = GRID_SIZE * 2
-
-# Color Configuration
 class Color(Enum):
     BLACK:  ColorType = (  0,   0,   0)
     WHITE:  ColorType = (255, 255, 255)
@@ -49,10 +31,31 @@ class Direction(Enum):
     LEFT  = (-1, 0)
     NONE  = ( 0, 0)
 
+class Difficulty(Enum):
+    """Game difficulty settings affecting rock placement."""
+    EASY = "easy"       # Uses fill manager for safe rock placement
+    NORMAL = "normal"   # Uses random rock placement (original)
+
 class CameraMode(Enum):
     """Available camera modes for game rendering."""
     PLAYER_FOLLOW = "player_follow"  # Camera follows player with limited view
     FULL_MAP = "full_map"           # Shows entire game map
 
-# Camera Configuration
-CAMERA_MODE: CameraMode = CameraMode.FULL_MAP # Default mode
+# Game Configuration
+FPS:           int = 60
+CELL_SIZE:     int = 30
+GRID_SIZE:     int = 8
+MARGIN:        int = 3
+VIEW_RADIUS:   int = 4
+PLAYER_MOVE_COOLDOWN: float = 0.02
+DIFFICULTY:  Difficulty = Difficulty.EASY  
+CAMERA_MODE: CameraMode = CameraMode.FULL_MAP
+
+# Window Configuration
+SCORE_HEIGHT:       int = 50  
+WINDOW_WIDTH:       int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE
+GAME_WINDOW_HEIGHT: int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE  
+WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  
+
+# AI Configuration
+STICK_VALUE = GRID_SIZE * 2

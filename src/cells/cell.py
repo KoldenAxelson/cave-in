@@ -3,8 +3,8 @@ from dataclasses import dataclass
 # Third-party imports
 import pygame
 # Local imports
-from src.utils.config import CELL_SIZE, MARGIN, Color
-from src.utils.config import Position, ColorType
+from src.utils.config import CELL_SIZE, MARGIN, CAMERA_MODE, WINDOW_WIDTH, GAME_WINDOW_HEIGHT, GRID_SIZE
+from src.utils.config import Position, ColorType, Color, CameraMode
 
 @dataclass
 class Cell:
@@ -29,23 +29,26 @@ class Cell:
         pass
 
     def draw(self, surface: pygame.Surface, screen_pos: Position) -> None:
-        """Draw the cell on the given surface at the specified position.
-        
-        Args:
-            surface: Pygame surface to draw on
-            screen_pos: Tuple of (x, y) coordinates for where to draw on screen
-            
-        Note:
-            Draws a rectangle with the cell's color and applies margins
-            for visual separation between cells.
-        """
+        """Draw the cell on the given surface at the specified position."""
         screen_x, screen_y = screen_pos
+        
+        # Get cell size based on camera mode
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            cell_size = min(
+                WINDOW_WIDTH // GRID_SIZE,
+                GAME_WINDOW_HEIGHT // GRID_SIZE
+            )
+            margin = max(1, MARGIN * cell_size // CELL_SIZE)  # Scale margin with cell size
+        else:
+            cell_size = CELL_SIZE
+            margin = MARGIN
+        
         # Create rectangle with margins applied
         rect = pygame.Rect(
-            screen_x + MARGIN,  # Left edge + margin
-            screen_y + MARGIN,  # Top edge + margin
-            CELL_SIZE - (2 * MARGIN),  # Width accounting for both margins
-            CELL_SIZE - (2 * MARGIN)   # Height accounting for both margins
+            screen_x + margin,  # Left edge + margin
+            screen_y + margin,  # Top edge + margin
+            cell_size - (2 * margin),  # Width accounting for both margins
+            cell_size - (2 * margin)   # Height accounting for both margins
         )
         # Draw the rectangle with the cell's color
         pygame.draw.rect(surface, self.color, rect)

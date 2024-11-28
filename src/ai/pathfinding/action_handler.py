@@ -21,6 +21,9 @@ class ActionHandler:
 
     def should_use_action(self) -> bool:
         """Determine if an action should be used based on current state."""
+        if self.world.is_board_full():
+            return False
+            
         if not self._can_act():
             return False
 

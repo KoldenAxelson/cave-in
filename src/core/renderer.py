@@ -4,7 +4,7 @@ from .world import GameWorld
 from .stats import Stats
 from src.utils.config import Color, WINDOW_WIDTH, WINDOW_HEIGHT, GRID_SIZE, CELL_SIZE, MARGIN, VIEW_RADIUS, SCORE_HEIGHT, GAME_WINDOW_HEIGHT, CAMERA_MODE, CameraMode
 from src.utils.config import Position
-from src.cells.cell import Cell
+from src.cells import Player,Cell
 from typing import Optional, Tuple
 
 @dataclass
@@ -18,14 +18,13 @@ class Renderer:
         self.font = pygame.font.Font(None, 36)
 
     def _draw_cell(self, surface: pygame.Surface, screen_pos: Position, cell: Optional[Cell]) -> None:
-        """Draw a cell or empty space at the specified screen position.
-        
-        Args:
-            surface: Surface to draw on
-            screen_pos: Position on screen to draw
-            cell: Cell object to draw, or None for empty space
-        """
+        """Draw a cell or empty space at the specified screen position."""
         if cell:
+            # Special handling for player to ensure direction indicator is drawn
+            if isinstance(cell, Player):
+                cell.draw(surface, screen_pos)
+                return
+                
             # Adjust cell drawing for full map mode
             if CAMERA_MODE == CameraMode.FULL_MAP:
                 cell_size = min(

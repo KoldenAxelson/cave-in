@@ -5,8 +5,9 @@ import random
 from itertools import product
 # Local imports
 from src.cells import Cell, Stick, Rock
-from src.utils.config import GRID_SIZE, Position
+from src.utils.config import GRID_SIZE, Position, Difficulty, DIFFICULTY
 from src.core.stats import Stats
+from src.utils.fill_manager import FillManager
 
 @dataclass
 class GameWorld:
@@ -20,6 +21,7 @@ class GameWorld:
     grid: Dict[Position, Cell] = field(default_factory=dict)
     player: Optional[Cell] = None  # Reference to player object
     stats: Optional[Stats] = None  # Reference to game statistics
+    fill_manager: FillManager = field(default_factory=FillManager)
 
     def __post_init__(self) -> None:
         """Initialize the game grid after dataclass initialization.
@@ -36,19 +38,24 @@ class GameWorld:
         self._place_random_stick()
 
     def _place_random_rock(self) -> None:
-        """Place a rock obstacle at a random empty position in the grid.
-        
-        Finds all empty cells in the grid and randomly selects one
-        to place a new rock. Called automatically when placing sticks
-        to maintain game challenge.
-        """
-        # Get list of all positions containing only basic cells
+        """Place a rock obstacle based on difficulty setting."""
         empty_positions = [
             pos for pos, cell in self.grid.items()
             if type(cell) == Cell
         ]
-        # Place rock if there are empty positions available
-        if empty_positions:
+        
+        if not empty_positions:
+            return
+
+        if DIFFICULTY == Difficulty.EASY:
+            # Try positions until we find a safe one
+            random.shuffle(empty_positions)
+            for pos in empty_positions:
+                if self.fill_manager.is_safe_rock_position(self, pos):
+                    self.grid[pos] = Rock(pos)
+                    return
+        else:
+            # Normal difficulty - place rock randomly
             rock_pos = random.choice(empty_positions)
             self.grid[rock_pos] = Rock(rock_pos)
 

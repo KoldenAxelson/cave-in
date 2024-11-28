@@ -5,8 +5,8 @@ import time
 import pygame
 # Local imports
 from .cell import Cell
-from src.utils.config import Color, CELL_SIZE, GRID_SIZE, PLAYER_MOVE_COOLDOWN
-from src.utils.config import Position, ColorType, Direction
+from src.utils.config import Color, CELL_SIZE, GRID_SIZE, PLAYER_MOVE_COOLDOWN, CAMERA_MODE, WINDOW_WIDTH, GAME_WINDOW_HEIGHT, MARGIN
+from src.utils.config import Position, ColorType, Direction, CameraMode
 from src.utils.input_handler import get_movement, use_action
 
 @dataclass
@@ -46,26 +46,29 @@ class Player(Cell):
             screen_pos: Tuple of (x, y) coordinates for where to draw on screen
         """
         super().draw(surface, screen_pos)  # Draw base cell (red square)
-        self._draw_direction_indicator(surface, screen_pos)  # Add direction indicator
-    
-    def _draw_direction_indicator(self, surface: pygame.Surface, screen_pos: Position) -> None:
-        """Draw a white dot indicating which direction the player is facing.
         
-        Args:
-            surface: Pygame surface to draw on
-            screen_pos: Tuple of (x, y) coordinates for where to draw on screen
-        """
+        # Get cell size based on camera mode
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            cell_size = min(
+                WINDOW_WIDTH // GRID_SIZE,
+                GAME_WINDOW_HEIGHT // GRID_SIZE
+            )
+        else:
+            cell_size = CELL_SIZE
+            
         screen_x, screen_y = screen_pos
         # Calculate center of cell
-        center_x = screen_x + CELL_SIZE // 2
-        center_y = screen_y + CELL_SIZE // 2
+        center_x = screen_x + cell_size // 2
+        center_y = screen_y + cell_size // 2
         # Get direction offset
         dx, dy = self.facing.value
         # Calculate indicator position (offset from center)
-        indicator_x = center_x + dx * (CELL_SIZE // 4)
-        indicator_y = center_y + dy * (CELL_SIZE // 4)
+        indicator_x = center_x + dx * (cell_size // 4)
+        indicator_y = center_y + dy * (cell_size // 4)
+        # Scale indicator size with cell size
+        indicator_size = max(2, cell_size // 10)
         # Draw white circle as direction indicator
-        pygame.draw.circle(surface, Color.WHITE.value, (indicator_x, indicator_y), 3)
+        pygame.draw.circle(surface, Color.WHITE.value, (indicator_x, indicator_y), indicator_size)
 
     def update_facing(self, delta: Position) -> None:
         """Update the direction the player is facing based on movement input."""
