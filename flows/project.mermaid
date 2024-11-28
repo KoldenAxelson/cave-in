@@ -1,58 +1,37 @@
 graph TD
-    A[Start Game] --> B1[Initialize Pygame]
-    B1 --> B2[Show Start Menu]
-    B2 --> B3{Choose Mode}
+    A[Start Game] --> B[Initialize Pygame]
+    B --> C[Show Menu]
     
-    B3 -->|Normal| C1[Initialize Normal Game]
-    B3 -->|Pathfinder| C2[Initialize AI Game]
-    B3 -->|Quit| Z[Exit]
+    C --> D{Select Mode}
+    D -->|Normal| E1[Initialize Normal Game]
+    D -->|Pathfinder| E2[Initialize AI Game]
+    D -->|Quit| Q[Exit Game]
     
-    C1 --> D[Game Loop]
-    C2 --> D
+    E1 --> F[Game Loop]
+    E2 --> F
     
     subgraph Game Loop
-        D --> E[Handle Events]
-        E --> F[Update World]
-        F --> G[Render Frame]
-        G --> D
+        F --> G[Handle Events]
+        G --> H[Update World]
+        H --> I[Render Frame]
+        I --> F
     end
     
     subgraph Handle Events
-        E --> E1[Check Quit]
-        E --> E2[Get Input]
-        E2 --> E2a[AI Controller]
-        E2 --> E2b[Keyboard]
-        E --> E3[Check Restart]
+        G --> G1[Check Quit]
+        G --> G2[Get Input]
+        G2 --> G2a[Keyboard Input]
+        G2 --> G2b[AI Input]
+        G --> G3[Check Reset]
     end
     
     subgraph Update World
-        F --> F1[Update Player]
-        F1 --> F2[Move Player]
-        F1 --> F3[Use Items]
-        F --> F4[Update AI State]
-        F4 --> F4a[Calculate Paths]
-        F4 --> F4b[Handle Actions]
-        F --> F5[Check Game Over]
+        H --> H1[Update Player]
+        H --> H2[Update AI]
+        H --> H3[Check Game Over]
     end
     
-    subgraph Render Frame
-        G --> G1[Draw Score Section]
-        G --> G2[Draw World Grid]
-        G2 --> G3[Draw Visible Cells]
-        G --> G4{Is Game Over?}
-        G4 -->|Yes| G5[Draw Game Over Screen]
-        G4 -->|No| G6[Update Display]
-    end
-    
-    H[Game Over] --> I{Restart?}
-    I -->|Yes| B2
-    I -->|No| Z
-
-    subgraph AI Systems
-        F4a --> P1[Find Sticks]
-        F4a --> P2[Calculate Optimal Path]
-        P2 --> P3[Handle Rocks]
-        F4b --> A1[Check Action State]
-        A1 --> A2[Evaluate Target]
-        A2 --> A3[Execute Action]
-    end
+    J[Game Over] --> K{Reset?}
+    K -->|Yes| L[Reset Game State]
+    L --> F
+    K -->|No| Q
