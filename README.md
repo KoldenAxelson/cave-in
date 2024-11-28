@@ -10,6 +10,15 @@ Cave In started as a simple puzzle game but has evolved into an educational plat
 - **Pathfinding AI**: Watch an AI solve the puzzle using advanced pathfinding algorithms
 - **Neural Network** (Coming Soon): Observe machine learning in action as a neural network learns to play
 
+## 🤖 AI Disclosure
+
+This project uses AI-assisted development practices:
+- Documentation and docstrings are primarily AI-generated for consistency
+- Core game mechanics and architecture are human-designed
+- Code implementation is a collaborative effort between human and AI
+
+We believe in transparency about AI usage in development. While AI helps with standardization and boilerplate code, all critical design decisions and game mechanics are human-directed.
+
 ## 🎮 Game Mechanics
 
 1. Navigate a procedurally generated cave system
