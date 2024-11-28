@@ -183,70 +183,65 @@ class PathFinder(AIInterface):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
     # Private Methods - Position Calculations
-    def _find_best_visible_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find best position within view radius considering path quality."""
-        if self._is_within_view_radius(current_pos, target_pos):
-            return target_pos
-            
-        dx = target_pos[0] - current_pos[0]
-        dy = target_pos[1] - current_pos[1]
-        
-        max_delta = max(abs(dx), abs(dy))
-        if max_delta > 0:
-            scale = min(VIEW_RADIUS, max_delta) / max_delta
-            dx = int(dx * scale)
-            dy = int(dy * scale)
-        
-        target_direction = (current_pos[0] + dx, current_pos[1] + dy)
-        
-        # Try to find a walkable position first
-        if walkable_pos := self._find_closest_walkable_position(current_pos, target_direction):
-            return walkable_pos
-            
-        # Fall back to any valid position if no walkable path exists
-        return self._find_closest_valid_position(current_pos, target_direction)
-
-    def _find_closest_valid_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find closest valid position to target within view radius."""
-        best_pos = None
-        best_distance = float('inf')
-        
-        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
-                
-                if self._is_valid_check_position(current_pos, check_pos):
-                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
-                    if dist_to_target < best_distance:
-                        best_distance = dist_to_target
-                        best_pos = check_pos
-        
-        return best_pos
-
-    def _find_closest_walkable_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find closest position that doesn't contain a rock within view radius."""
-        best_pos = None
-        best_distance = float('inf')
-        
-        for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-            for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-                check_pos = (target_pos[0] + dx, target_pos[1] + dy)
-                
-                if (self._is_valid_check_position(current_pos, check_pos) and 
-                    not isinstance(self.world.grid.get(check_pos), Rock)):
-                    dist_to_target = self.manhattan_distance(check_pos, target_pos)
-                    if dist_to_target < best_distance:
-                        best_distance = dist_to_target
-                        best_pos = check_pos
-        
-        return best_pos
+    def _normalize_vector(self, dx: int, dy: int) -> Tuple[float, float]:
+        """Normalize a vector to unit length while preserving direction."""
+        length = (dx * dx + dy * dy) ** 0.5
+        if length == 0:
+            return (0.0, 0.0)
+        return (dx / length, dy / length)
 
     def _is_valid_check_position(self, current_pos: Position, check_pos: Position) -> bool:
-        """Check if a position is valid for pathfinding."""
+        """Check if a position is valid for pathfinding and within view radius."""
         if not self._is_valid_position(check_pos):
             return False
+        return self.manhattan_distance(current_pos, check_pos) <= VIEW_RADIUS
+
+    def _score_position(self, pos: Position, target_pos: Position) -> float:
+        """Score a position based on progress toward target."""
+        return self.manhattan_distance(pos, target_pos)
+
+    def _calculate_scan_vectors(self, current_pos: Position, target_pos: Position) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """Calculate primary and secondary vectors for scanning."""
+        primary_vector = self._normalize_vector(
+            target_pos[0] - current_pos[0],
+            target_pos[1] - current_pos[1]
+        )
+        # Calculate perpendicular vector for secondary scanning
+        secondary_vector = (-primary_vector[1], primary_vector[0])
+        return primary_vector, secondary_vector
+
+    def _calculate_check_position(self, main_pos: Position, secondary_vector: Tuple[float, float], offset: int) -> Position:
+        """Calculate position to check based on main position and offset."""
+        return (
+            main_pos[0] + int(secondary_vector[0] * offset),
+            main_pos[1] + int(secondary_vector[1] * offset)
+        )
+
+    def _find_best_visible_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
+        """Find best position along vector to target within view radius."""
+        primary_vector, secondary_vector = self._calculate_scan_vectors(current_pos, target_pos)
         
-        return self._is_within_view_radius(current_pos, check_pos)
+        best_pos = None
+        best_score = float('inf')
+        
+        # Scan along primary vector first, then fan out
+        for d in range(VIEW_RADIUS + 1):
+            main_pos = (
+                current_pos[0] + int(primary_vector[0] * d),
+                current_pos[1] + int(primary_vector[1] * d)
+            )
+            
+            # Fan out perpendicular to main vector
+            for offset in range(-d//2, d//2 + 1):
+                check_pos = self._calculate_check_position(main_pos, secondary_vector, offset)
+                
+                if self._is_valid_check_position(current_pos, check_pos):
+                    score = self._score_position(check_pos, target_pos)
+                    if score < best_score:
+                        best_score = score
+                        best_pos = check_pos
+        
+        return best_pos
 
     def _is_valid_position(self, pos: Position) -> bool:
         """Check if a position is valid (in bounds and walkable)."""
@@ -275,7 +270,3 @@ class PathFinder(AIInterface):
                 left = mid + 1
 
         return (best_path, best_score) if best_path else None
-
-    def _is_within_view_radius(self, pos1: Position, pos2: Position) -> bool:
-        """Check if two positions are within view radius of each other."""
-        return self.manhattan_distance(pos1, pos2) <= VIEW_RADIUS
