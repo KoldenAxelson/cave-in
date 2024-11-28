@@ -1,27 +1,46 @@
 # Cave In
 
-A minimalist roguelike puzzle game where you navigate through a cave collecting sticks while avoiding getting trapped by rocks.
+A Python-based educational game demonstrating pathfinding, AI decision-making, and game development fundamentals.
 
-## 🎮 Gameplay
+## 🎯 Overview
 
-- Move around using WASD keys
-- Collect brown sticks to increase your score
-- Use sticks to remove gray rocks by facing them and pressing SPACE
-- Avoid getting trapped - game ends when no valid moves remain
-- Press ESC to restart when game is over
+Cave In started as a simple puzzle game but has evolved into an educational platform showcasing different AI approaches to game problem-solving. Players can experience the game from multiple perspectives:
 
-## 🚀 Features
+- **Manual Mode**: Play traditionally using keyboard controls
+- **Pathfinding AI**: Watch an AI solve the puzzle using advanced pathfinding algorithms
+- **Neural Network** (Coming Soon): Observe machine learning in action as a neural network learns to play
 
-- Procedurally generated obstacles
-- Score tracking (sticks collected and moves made)
-- Limited visibility radius around player
-- Direction indicator showing which way player is facing
-- Clean minimalist graphics
+## 🎮 Game Mechanics
 
-## 🛠️ Installation
+1. Navigate a procedurally generated cave system
+2. Collect sticks (brown squares) to increase your score
+3. Use sticks to remove rocks (gray squares) blocking your path
+4. Plan carefully - getting trapped ends the game!
 
-1. Ensure you have Python 3.7+ installed
-2. Clone this repository:
+## 🤖 AI Features
+
+### Pathfinding AI
+- Implements A* pathfinding with dynamic path recalculation
+- Demonstrates optimal resource collection strategies
+- Visualizes decision-making process in real-time
+
+### Neural Network Mode (Coming Soon)
+- Watch an AI learn to play through reinforcement learning
+- Compare performance against pathfinding AI
+- Observe different training strategies
+
+## 🛠️ Technical Implementation
+
+Built with Python and Pygame, featuring:
+- Object-oriented design with dataclass implementation
+- Abstract base classes for AI interfaces
+- Modular architecture supporting multiple AI implementations
+- Configurable difficulty and visualization settings
+
+## 🚀 Getting Started
+
+1. Ensure Python 3.7+ is installed
+2. Clone and set up the repository:
 ```bash
     git clone https://github.com/KoldenAxelson/cave-in.git
     cd cave-in
@@ -30,7 +49,6 @@ A minimalist roguelike puzzle game where you navigate through a cave collecting 
     pip install pygame
     python main.py
 ```
-
 
 ## 🎯 How to Play
 
@@ -47,13 +65,21 @@ A minimalist roguelike puzzle game where you navigate through a cave collecting 
 - Implements a viewport system that follows the player
 - Features a modular cell-based architecture for easy expansion
 
-## 📝 License
+## 📝 Educational Value
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project serves as a practical demonstration of:
+- Pathfinding algorithms in game environments
+- AI decision-making strategies
+- Game development patterns and practices
+- Neural network applications in gaming
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Particularly interested in:
+- Neural network implementation
+- Additional AI strategies
+- Performance optimizations
+- Educational documentation
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -71,6 +97,6 @@ Created by Kolden Axelson
 
 ---
 
-Made with ❤️ and Python
+Made with ❤️, Python, and a passion for AI education
 
 
