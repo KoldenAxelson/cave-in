@@ -44,7 +44,7 @@ class CameraMode(Enum):
 # Game Configuration
 FPS:           int = 60
 CELL_SIZE:     int = 30
-GRID_SIZE:     int = 8
+GRID_SIZE:     int = 20
 MARGIN:        int = 3
 VIEW_RADIUS:   int = 4
 PLAYER_MOVE_COOLDOWN: float = 0.02

@@ -28,29 +28,17 @@ class Cell:
         """
         pass
 
-    def draw(self, surface: pygame.Surface, screen_pos: Position) -> None:
+    def draw(self, surface: pygame.Surface, screen_pos: Position, cell_size: int, margin: int) -> None:
         """Draw the cell on the given surface at the specified position."""
         screen_x, screen_y = screen_pos
         
-        # Get cell size based on camera mode
-        if CAMERA_MODE == CameraMode.FULL_MAP:
-            cell_size = min(
-                WINDOW_WIDTH // GRID_SIZE,
-                GAME_WINDOW_HEIGHT // GRID_SIZE
-            )
-            margin = max(1, MARGIN * cell_size // CELL_SIZE)  # Scale margin with cell size
-        else:
-            cell_size = CELL_SIZE
-            margin = MARGIN
-        
         # Create rectangle with margins applied
         rect = pygame.Rect(
-            screen_x + margin,  # Left edge + margin
-            screen_y + margin,  # Top edge + margin
-            cell_size - (2 * margin),  # Width accounting for both margins
-            cell_size - (2 * margin)   # Height accounting for both margins
+            screen_x + margin,
+            screen_y + margin,
+            cell_size - (2 * margin),
+            cell_size - (2 * margin)
         )
-        # Draw the rectangle with the cell's color
         pygame.draw.rect(surface, self.color, rect)
 
     def use(self, world) -> None:

@@ -19,30 +19,18 @@ class Renderer:
 
     def _draw_cell(self, surface: pygame.Surface, screen_pos: Position, cell: Optional[Cell]) -> None:
         """Draw a cell or empty space at the specified screen position."""
+        cell_size, margin = self._get_cell_size()
+        
         if cell:
-            # Special handling for player to ensure direction indicator is drawn
-            if isinstance(cell, Player):
-                cell.draw(surface, screen_pos)
-                return
-                
-            # Adjust cell drawing for full map mode
-            if CAMERA_MODE == CameraMode.FULL_MAP:
-                cell_size = min(
-                    WINDOW_WIDTH // GRID_SIZE,
-                    GAME_WINDOW_HEIGHT // GRID_SIZE
-                )
-                margin = max(1, MARGIN * cell_size // CELL_SIZE)  # Scale margin
-                rect = pygame.Rect(
-                    screen_pos[0] + margin,
-                    screen_pos[1] + margin,
-                    cell_size - (2 * margin),
-                    cell_size - (2 * margin)
-                )
-                pygame.draw.rect(surface, cell.color, rect)
-            else:
-                cell.draw(surface, screen_pos)
+            cell.draw(surface, screen_pos, cell_size, margin)
         else:
-            self._draw_empty_cell(surface, screen_pos)
+            rect = pygame.Rect(
+                screen_pos[0] + margin,
+                screen_pos[1] + margin,
+                cell_size - (2 * margin),
+                cell_size - (2 * margin)
+            )
+            pygame.draw.rect(surface, Color.BLACK.value, rect)
 
     def _draw_empty_cell(self, surface: pygame.Surface, screen_pos: Position) -> None:
         """Draw an empty cell (black rectangle) at the specified position.
@@ -198,6 +186,19 @@ class Renderer:
         # Draw text
         surface.blit(game_over_surface, game_over_rect)
         surface.blit(restart_surface, restart_rect)
+
+    def _get_cell_size(self) -> Tuple[int, int]:
+        """Calculate cell size and margin based on camera mode."""
+        if CAMERA_MODE == CameraMode.FULL_MAP:
+            cell_size = min(
+                WINDOW_WIDTH // GRID_SIZE,
+                GAME_WINDOW_HEIGHT // GRID_SIZE
+            )
+            margin = max(1, MARGIN * cell_size // CELL_SIZE)
+        else:
+            cell_size = CELL_SIZE
+            margin = MARGIN
+        return cell_size, margin
 
     def render(self, world: GameWorld) -> None:
         """Main render function that draws the complete game state.

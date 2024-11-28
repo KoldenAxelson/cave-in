@@ -38,24 +38,10 @@ class Player(Cell):
         if use_action():
             self.try_use_facing_cell(world)
 
-    def draw(self, surface: pygame.Surface, screen_pos: Position) -> None:
-        """Draw the player cell and direction indicator.
+    def draw(self, surface: pygame.Surface, screen_pos: Position, cell_size: int, margin: int) -> None:
+        """Draw the player cell and direction indicator."""
+        super().draw(surface, screen_pos, cell_size, margin)
         
-        Args:
-            surface: Pygame surface to draw on
-            screen_pos: Tuple of (x, y) coordinates for where to draw on screen
-        """
-        super().draw(surface, screen_pos)  # Draw base cell (red square)
-        
-        # Get cell size based on camera mode
-        if CAMERA_MODE == CameraMode.FULL_MAP:
-            cell_size = min(
-                WINDOW_WIDTH // GRID_SIZE,
-                GAME_WINDOW_HEIGHT // GRID_SIZE
-            )
-        else:
-            cell_size = CELL_SIZE
-            
         screen_x, screen_y = screen_pos
         # Calculate center of cell
         center_x = screen_x + cell_size // 2
