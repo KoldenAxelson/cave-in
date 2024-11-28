@@ -59,7 +59,8 @@ class Game:
             self._initialize_game()
             self._main_loop()
 
-    def set_ai_controller(self, controller) -> None:
+    # Private Methods - AI Control
+    def _set_ai_controller(self, controller) -> None:
         """Assigns a new AI controller to the game instance.
         Allows dynamic switching of AI behavior during gameplay."""
         self.ai_controller = controller

@@ -19,15 +19,15 @@ class PathCalculator:
         Direction.LEFT.value   # (-1, 0)
     ])
 
-    # Public Methods - Core Path Finding
-    def find_unrestricted_path(self) -> Optional[PathType]:
+    # Private Methods - Path Finding
+    def _find_unrestricted_path(self) -> Optional[PathType]:
         """Finds shortest path to nearest stick, ignoring rock obstacles.
         Used for initial path planning before considering rock removal."""
         if not self._can_find_path():
             return None
         return self._find_shortest_path_to_sticks()
 
-    def find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[PathType]:
+    def _find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[PathType]:
         """Finds optimal path allowing limited rock removals."""
         if not self.world.player:
             return None

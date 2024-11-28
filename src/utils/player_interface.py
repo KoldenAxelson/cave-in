@@ -69,14 +69,4 @@ class PlayerInterface:
         if hasattr(target_cell, 'use'):
             target_cell.use(self.world)
             return True
-        return False
-    
-    def is_valid_move(self, target_pos: Position) -> bool:
-        """Checks if a move to the target position is valid.
-        Ensures target is empty and different from current position."""
-        if not self.world.player:
-            return False
-        target_cell = self.world.grid.get(target_pos)
-        return (target_pos != self.position and 
-                isinstance(target_cell, Cell) and 
-                type(target_cell) == Cell) 
+        return False 
