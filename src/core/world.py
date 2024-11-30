@@ -68,9 +68,8 @@ class GameWorld:
 
     def _place_normal_rock(self, empty_positions: List[Position]) -> None:
         """Places a rock with random chance in normal difficulty."""
-        if random.random() < DIFFICULTY.value:
-            rock_pos = random.choice(empty_positions)
-            self.grid[rock_pos] = Rock(rock_pos)
+        rock_pos = random.choice(empty_positions)
+        self.grid[rock_pos] = Rock(rock_pos)
 
     def _place_easy_rock(self, empty_positions: List[Position]) -> None:
         """Places a rock in a position that won't trap the player."""

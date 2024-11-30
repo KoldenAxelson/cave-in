@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, Tuple, Any
+from typing import List, Optional, Set, Tuple, Any, Callable
 from src.utils.config import Position, Direction, GRID_SIZE, PathType
 from src.cells import Cell, Rock, Stick
 
@@ -27,19 +27,23 @@ class PathCalculator:
             return None
         return self._find_shortest_path_to_sticks()
 
-    def _find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[PathType]:
+    def find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[List[Position]]:
         """Finds optimal path allowing limited rock removals."""
-        if not self.world.player:
-            return None
-        start = self.world.player.position
-        return self._breadth_first_search_with_rocks(start, target_pos, max_rocks)
+        return self.find_path_to_position(target_pos)
 
-    def find_path_to_position(self, target_pos: Position) -> Optional[PathType]:
-        """Finds shortest path to specific position, ignoring rocks."""
+    def find_path_to_position(
+        self, 
+        target_pos: Position, 
+        heuristic: Optional[Callable[[Position], float]] = None
+    ) -> Optional[List[Position]]:
+        """Find path to target position using optional heuristic for path scoring."""
         if not self.world.player:
             return None
-        start = self.world.player.position
-        return self._breadth_first_search(start, [target_pos])
+            
+        start_pos = self.world.player.position
+        max_rocks = self.world.stats.sticks_collected if self.world.stats else float('inf')
+        
+        return self._breadth_first_search_with_rocks(start_pos, target_pos, max_rocks)
 
     def find_path_without_rocks(self, target_pos: Position) -> Optional[List[Position]]:
         """Finds path avoiding all rocks completely."""
@@ -91,13 +95,13 @@ class PathCalculator:
                 
         return shortest_path
 
-    def _breadth_first_search_with_rocks(self, start: Position, target_pos: Position, max_rocks: int) -> Optional[PathType]:
+    def _breadth_first_search_with_rocks(self, start: Position, target_pos: Position, max_rocks: int) -> Optional[List[Position]]:
         """Performs BFS pathfinding allowing rock removal."""
-        queue: List[Tuple[Position, PathType, Set[Position]]] = [(start, [start], set())]
+        queue: List[Tuple[Position, List[Position], Set[Position]]] = [(start, [start], set())]
         visited = {(start, tuple())}
         best_path = None
         best_length = float('inf')
-
+        
         while queue:
             current, path, removed_rocks = queue.pop(0)
             
@@ -110,31 +114,36 @@ class PathCalculator:
                 continue
 
             for next_pos in self._get_valid_neighbors(current):
-                if path := self._try_path_through_position(next_pos, path, removed_rocks, max_rocks, visited):
-                    queue.append(path)
+                if result := self._try_path_through_position(next_pos, path, removed_rocks, max_rocks, visited):
+                    queue.append(result)
 
         return best_path
 
     def _try_path_through_position(
         self, 
         next_pos: Position, 
-        current_path: PathType, 
+        current_path: List[Position], 
         removed_rocks: Set[Position],
         max_rocks: int,
         visited: Set[Tuple[Position, Tuple[Position, ...]]]
-    ) -> Optional[Tuple[Position, PathType, Set[Position]]]:
+    ) -> Optional[Tuple[Position, List[Position], Set[Position]]]:
         """Attempts to extend path through a given position."""
-        new_removed = removed_rocks.copy()
+        if current_path is None:
+            current_path = []
+            
+        new_removed = removed_rocks.copy() if removed_rocks is not None else set()
         
         if self._is_rock(next_pos):
-            if len(removed_rocks) >= max_rocks:
+            if len(new_removed) >= max_rocks:
                 return None
             new_removed.add(next_pos)
 
+        # Convert removed rocks to tuple for visited set
         state = (next_pos, tuple(sorted(new_removed)))
         if state not in visited:
             visited.add(state)
-            return (next_pos, current_path + [next_pos], new_removed)
+            new_path = current_path + [next_pos]  # Keep as list
+            return (next_pos, new_path, new_removed)
             
         return None
 

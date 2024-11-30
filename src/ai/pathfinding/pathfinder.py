@@ -90,33 +90,28 @@ class PathFinder(AIInterface):
     def _find_optimal_path_with_rocks(self, target_pos: Position) -> None:
         """Find optimal path considering rock removal.
         Balances path length against number of rocks to remove."""
-        best_path = None
-        best_score = float('inf')
+        current_direction = self._get_current_movement_direction()
         
-        if path := self.path_calculator.find_path_to_position(target_pos):
+        def momentum_heuristic(pos: Position) -> float:
+            direction_change = self._calculate_direction_change(current_direction, pos)
+            return direction_change * 0.3  # Weight for direction changes
+            
+        if path := self.path_calculator.find_path_to_position(target_pos, heuristic=momentum_heuristic):
             rocks_in_path = self.path_calculator.count_rocks_in_path(path)
-            score = (STICK_VALUE * rocks_in_path) + len(path)
             
             if rocks_in_path == 0:
                 self._set_paths(path)
                 return
-            
-            best_path = path
-            best_score = score
-        
-        if alternative := self._find_best_alternative_path(
-            max_rocks=self.path_calculator.count_rocks_in_path(best_path) if best_path else float('inf'),
-            target_pos=target_pos
-        ):
-            alt_path, alt_score = alternative
-            if alt_score < best_score:
-                best_path = alt_path
-                best_score = alt_score
-
-        if best_path:
-            self._set_paths(best_path)
-        else:
-            self._clear_paths()
+                
+            # Try to find a better path with fewer rocks
+            if alternative := self._find_best_alternative_path(rocks_in_path, target_pos):
+                alt_path, alt_score = alternative
+                current_score = len(path) + (STICK_VALUE * rocks_in_path)
+                
+                if alt_score < current_score:
+                    path = alt_path
+                    
+            self._set_paths(path)
 
     # Private Methods - Path Management
     def _clear_paths(self) -> None:
@@ -323,3 +318,46 @@ class PathFinder(AIInterface):
         super().update(world)
         if movement := self.get_movement():
             self._update_movement_history(movement)
+
+    # Private Methods - Direction Handling
+    def _get_current_movement_direction(self) -> Direction:
+        """Get the current movement direction based on path or player facing."""
+        if len(self.current_path) >= 2:
+            current = self.current_path[0]
+            next_pos = self.current_path[1]
+            dx = next_pos[0] - current[0]
+            dy = next_pos[1] - current[1]
+            return self._vector_to_direction((dx, dy))
+        elif self.player and self.player.facing:
+            return self.player.facing
+        return Direction.NONE
+
+    def _vector_to_direction(self, vector: Position) -> Direction:
+        """Convert a movement vector to the closest cardinal direction."""
+        dx, dy = vector
+        if dx == 0 and dy == 0:
+            return Direction.NONE
+            
+        # Determine primary direction based on larger component
+        if abs(dx) > abs(dy):
+            return Direction.EAST if dx > 0 else Direction.WEST
+        else:
+            return Direction.SOUTH if dy > 0 else Direction.NORTH
+
+    def _calculate_direction_change(self, current_dir: Direction, next_pos: Position) -> float:
+        """Calculate the magnitude of direction change to reach next position.
+        Returns value between 0 (same direction) and 1 (opposite direction)."""
+        if current_dir == Direction.NONE or not self.player:
+            return 0.0
+            
+        # Calculate new direction vector
+        dx = next_pos[0] - self.player.position[0]
+        dy = next_pos[1] - self.player.position[1]
+        if dx == 0 and dy == 0:
+            return 0.0
+            
+        new_dir = self._vector_to_direction((dx, dy))
+        
+        # Use direction values for comparison
+        current_vec = current_dir.value
+        new_vec = new_dir.value

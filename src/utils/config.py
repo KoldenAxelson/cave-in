@@ -52,12 +52,12 @@ class Color(Enum):
 # Game Constants
 # -------------
 # Core gameplay settings
-FPS:                    int = 60   # Target frames per second
+FPS:                    int = 120   # Target frames per second
 CELL_SIZE:              int = 30   # Pixel size of each grid cell
 GRID_SIZE:              int = 10   # Number of cells in each row/column
 MARGIN:                 int = 3    # Pixel gap between cells
 VIEW_RADIUS:            int = 4    # Cells visible around player
-PLAYER_MOVE_COOLDOWN: float = 0.02 # Seconds between allowed moves
+PLAYER_MOVE_COOLDOWN: float = 0.002 # Seconds between allowed moves
 
 # Current Mode Settings
 DIFFICULTY:  Difficulty = Difficulty.EASY     # Current difficulty mode
