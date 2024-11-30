@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Set, Any, Optional
-from src.utils.config import Position, GRID_SIZE, PathType
+from typing import List, Any, Optional
+from src.utils.config import Position, GRID_SIZE
 from src.cells import Rock, Stick, Cell
 
 @dataclass

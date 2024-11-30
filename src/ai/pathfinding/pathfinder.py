@@ -72,10 +72,6 @@ class PathFinder(AIInterface):
     # Private Methods - Path Planning
     def _calculate_next_path(self) -> None:
         """Calculate optimal path to nearest stick."""
-        if not self.grid_scanner.has_valid_state():
-            self._clear_paths()
-            return
-
         target_stick = self.position_scorer.find_closest_stick(
             self.player.position,
             self.path_calculator.find_sticks()
@@ -96,19 +92,12 @@ class PathFinder(AIInterface):
             self.player.position, 
             target_stick
         )
-        if not visible_target:
-            self._clear_paths()
-            return
         
         self._find_optimal_path_with_rocks(visible_target)
 
     def _find_optimal_path_with_rocks(self, target_pos: Position) -> None:
         """Find optimal path considering rock removal."""
         path = self._find_initial_path(target_pos)
-        if not path:
-            self._clear_paths()
-            return
-            
         self._optimize_path_with_rocks(path, target_pos)
 
     def _find_initial_path(self, target_pos: Position) -> Optional[List[Position]]:
