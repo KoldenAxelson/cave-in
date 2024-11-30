@@ -3,7 +3,7 @@ from typing import List, Any, Optional, Tuple
 from src.utils.config import Position, Direction, STICK_VALUE, VIEW_RADIUS, GRID_SIZE
 from src.ai.ai_interface import AIInterface
 from src.utils.player_interface import PlayerInterface
-from .path_calculator import PathCalculator
+from .path_calculator.path_calculator import PathCalculator
 from .action_handler import ActionHandler
 from src.cells import Cell, Rock, Stick
 
@@ -204,7 +204,7 @@ class PathFinder(AIInterface):
     def _has_valid_state(self) -> bool:
         """Check if pathfinding prerequisites are met."""
         return (self.world.player and 
-                bool(sticks := self.path_calculator.find_sticks()))
+                bool(self.path_calculator.find_sticks()))
 
     def _find_closest_stick(self) -> Optional[Position]:
         """Find closest stick using Manhattan distance."""
