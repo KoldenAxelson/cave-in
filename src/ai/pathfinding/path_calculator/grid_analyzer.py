@@ -20,6 +20,10 @@ class GridAnalyzer:
         return [next_pos for dx, dy in self.directions
                 if (next_pos := self._get_next_position(pos, dx, dy))
                 and self._is_valid_cell(next_pos)]
+    
+    def is_rock(self, pos: Position) -> bool:
+        """Checks if position contains a rock obstacle."""
+        return isinstance(self.world.grid.get(pos), Rock)
 
     # Private Methods - Grid Navigation
     def _get_next_position(self, pos: Position, dx: int, dy: int) -> Optional[Position]:
@@ -36,10 +40,6 @@ class GridAnalyzer:
         """Checks if position contains a valid cell type."""
         cell = self.world.grid.get(pos)
         return isinstance(cell, (Cell, Rock, Stick))
-
-    def is_rock(self, pos: Position) -> bool:
-        """Checks if position contains a rock obstacle."""
-        return isinstance(self.world.grid.get(pos), Rock)
 
     def _is_stick(self, pos: Position) -> bool:
         """Checks if position contains a stick."""
