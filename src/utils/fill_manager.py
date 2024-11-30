@@ -82,21 +82,3 @@ class FillManager:
                 0 <= pos[1] < GRID_SIZE and 
                 grid[pos])
     
-    # Private Methods - Position Validation
-    def _is_safe_rock_position(self, pos: Position, grid: Dict[Position, bool]) -> bool:
-        """Determines if placing a rock at the given position would create an isolated region.
-        Uses flood fill to check if all empty cells remain connected."""
-        # Temporarily mark position as blocked
-        grid[pos] = False
-        
-        # Find all connected regions from player start
-        visited = set()
-        self._flood_fill_region(self.player_start, visited, grid)
-        
-        # Check if any unreachable regions exist
-        remaining = self._find_remaining_regions(visited, grid)
-        
-        # Reset position state
-        grid[pos] = True
-        return not remaining
-    

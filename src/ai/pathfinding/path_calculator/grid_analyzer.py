@@ -40,7 +40,3 @@ class GridAnalyzer:
         """Checks if position contains a valid cell type."""
         cell = self.world.grid.get(pos)
         return isinstance(cell, (Cell, Rock, Stick))
-
-    def _is_stick(self, pos: Position) -> bool:
-        """Checks if position contains a stick."""
-        return isinstance(self.world.grid.get(pos), Stick) 

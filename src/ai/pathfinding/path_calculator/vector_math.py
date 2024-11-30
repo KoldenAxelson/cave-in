@@ -16,7 +16,7 @@ class VectorMath:
             return (0.0, 0.0)
         return (dx / length, dy / length)
 
-    def vector_to_direction(self, vector: Position) -> Direction:
+    def _vector_to_direction(self, vector: Position) -> Direction:
         """Convert a movement vector to the closest cardinal direction."""
         dx, dy = vector
         if dx == 0 and dy == 0:
@@ -52,7 +52,7 @@ class VectorMath:
         if dx == 0 and dy == 0:
             return 0.0
             
-        new_dir = self.vector_to_direction((dx, dy))
+        new_dir = self._vector_to_direction((dx, dy))
         
         # Use direction values for comparison
         current_vec = current_dir.value
@@ -98,7 +98,7 @@ class VectorMath:
             next_pos = current_path[1]
             dx = next_pos[0] - current[0]
             dy = next_pos[1] - current[1]
-            return self.vector_to_direction((dx, dy))
+            return self._vector_to_direction((dx, dy))
         elif player_facing:
             return player_facing
         return Direction.NONE

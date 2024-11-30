@@ -15,7 +15,7 @@ class Renderer:
     
     def __post_init__(self) -> None:
         """Initializes the font system after dataclass creation."""
-        self.font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, 26)
 
     # Public Methods
     def render(self, world: GameWorld) -> None:

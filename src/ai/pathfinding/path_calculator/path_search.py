@@ -87,13 +87,6 @@ class PathSearch:
                 queue.append((next_pos, path + [next_pos]))
 
     # Private Methods - Search Queue Management
-    def _initialize_search_queue(
-        self, 
-        start: Position
-    ) -> List[Tuple[Position, List[Position], Set[Position]]]:
-        """Initialize the search queue with starting position."""
-        return [(start, [start], set())]
-
     def _should_skip_path(self, path: List[Position], best_length: float) -> bool:
         """Determine if current path should be skipped."""
         return len(path) >= best_length
