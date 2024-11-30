@@ -38,28 +38,35 @@ class PathCalculator:
         heuristic: Optional[Callable[[Position], float]] = None
     ) -> Optional[List[Position]]:
         """Find path to target position using optional heuristic for path scoring."""
-        if not self.world.player:
-            return None
-            
         start_pos = self.world.player.position
         max_rocks = self.world.stats.sticks_collected if self.world.stats else float('inf')
         
-        return self.path_search.breadth_first_search_with_rocks(start_pos, target_pos, max_rocks)
+        return self.path_search.breadth_first_search(
+            start_pos, 
+            target_pos, 
+            max_rocks
+        )
 
     def find_path_without_rocks(self, target_pos: Position) -> Optional[List[Position]]:
         """Finds path avoiding all rocks completely."""
-        if not self.world.player:
-            return None
-            
-        return self.path_search.breadth_first_search_no_rocks(
+        return self.path_search.breadth_first_search(
             self.world.player.position, 
             target_pos
+            # max_rocks defaults to 0
         )
 
-    def find_path_with_max_rocks(self, max_rocks: int, target_pos: Position) -> Optional[List[Position]]:
+    def find_path_with_max_rocks(
+        self, 
+        max_rocks: int, 
+        target_pos: Position
+    ) -> Optional[List[Position]]:
         """Finds optimal path allowing limited rock removals."""
-        return self.find_path_to_position(target_pos) 
-    
+        return self.path_search.breadth_first_search(
+            self.world.player.position,
+            target_pos,
+            max_rocks
+        )
+
     def find_sticks(self) -> List[Position]:
         """Locates all stick positions in the current grid."""
         return [pos for pos, cell in self.world.grid.items() 

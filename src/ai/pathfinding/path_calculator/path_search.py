@@ -13,54 +13,48 @@ class PathSearch:
     world: Any  # Reference to game world state
     grid_analyzer: Any  # Reference to grid analysis helper
 
-    def breadth_first_search_with_rocks(
+    def breadth_first_search(
         self, 
         start: Position, 
-        target_pos: Position, 
-        max_rocks: int
+        target_pos: Position,
+        max_rocks: int = 0
     ) -> Optional[List[Position]]:
-        """Performs BFS pathfinding allowing rock removal."""
-        queue = self._initialize_search_queue(start)
-        visited = {(start, tuple())}
+        """Performs BFS pathfinding with configurable rock handling."""
+        # Initialize based on whether we're allowing rocks
+        if max_rocks > 0:
+            queue = [(start, [start], set())]
+            visited = {(start, tuple())}
+        else:
+            queue = [(start, [start])]
+            visited = {start}
+        
         best_path = None
         best_length = float('inf')
         
         while queue:
-            current, path, removed_rocks = queue.pop(0)
-            
-            if self._should_skip_path(path, best_length):
-                continue
-            
-            if self._is_target_reached(current, target_pos):
-                best_path, best_length = self._update_best_path(path, best_length)
-                continue
-
-            self.explore_neighbors(
-                current, path, removed_rocks, max_rocks, visited, queue
-            )
-
-        return best_path
-
-    def breadth_first_search_no_rocks(
-        self, 
-        start: Position, 
-        target_pos: Position
-    ) -> Optional[List[Position]]:
-        """Performs BFS pathfinding avoiding all rocks."""
-        queue = [(start, [start])]
-        visited = {start}
+            if max_rocks > 0:
+                current, path, removed_rocks = queue.pop(0)
+                
+                if self._should_skip_path(path, best_length):
+                    continue
+                    
+                if self._is_target_reached(current, target_pos):
+                    best_path, best_length = self._update_best_path(path, best_length)
+                    continue
+                    
+                self.explore_neighbors(
+                    current, path, removed_rocks, max_rocks, visited, queue
+                )
+            else:
+                current, path = queue.pop(0)
+                if current == target_pos:
+                    return path
+                    
+                self.explore_rock_free_neighbors(
+                    current, path, visited, queue
+                )
         
-        while queue:
-            current, path = queue.pop(0)
-            if current == target_pos:
-                return path
-            
-            self.explore_rock_free_neighbors(
-                current, path, visited, queue
-            )
-        
-        return None
-    
+        return best_path if max_rocks > 0 else None
 
     def explore_neighbors(
         self,

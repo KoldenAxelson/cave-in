@@ -111,10 +111,6 @@ class GridScanner:
                     
         return best_pos, best_score 
 
-    def has_valid_state(self) -> bool:
-        """Check if pathfinding prerequisites are met."""
-        return bool(self.world.player)
-
     def find_best_alternative_path(
         self, 
         max_rocks: int, 

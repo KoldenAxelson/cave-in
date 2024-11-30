@@ -66,7 +66,9 @@ class ActionHandler:
     def _can_act(self) -> bool:
         """Checks if action cooldown has expired.
         Ensures smooth action pacing."""
-        return self.player.position and time.time() - self.last_action_time >= PLAYER_MOVE_COOLDOWN
+        if time.time() - self.last_action_time < PLAYER_MOVE_COOLDOWN:
+            return False
+        return True
 
     def _can_remove_rock(self, target_pos: Position) -> bool:
         """Validates if rock removal is possible.
@@ -99,10 +101,7 @@ class ActionHandler:
 
     # Private Methods - Action Execution
     def _get_target_position(self) -> Optional[Position]:
-        """Calculates position in front of player.
-        Returns None if player position or facing is invalid."""
-        if not self.player.position or not self.player.facing:
-            return None
+        """Calculates position in front of player."""
 
         px, py = self.player.position
         dx, dy = self.player.facing.value
