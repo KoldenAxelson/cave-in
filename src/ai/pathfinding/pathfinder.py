@@ -60,8 +60,7 @@ class PathFinder(AIInterface):
 
     # Private Methods - Path Planning
     def _calculate_next_path(self) -> None:
-        """Calculate optimal path to nearest stick.
-        Orchestrates the path finding process."""
+        """Calculate optimal path to nearest stick."""
         if not self._has_valid_state():
             self._clear_paths()
             return
@@ -74,8 +73,7 @@ class PathFinder(AIInterface):
         self._find_and_set_path(target_stick)
 
     def _find_and_set_path(self, target_stick: Position) -> None:
-        """Find and set optimal path to target stick.
-        Tries rock-free path first, then considers rock removal."""
+        """Find and set optimal path to target stick."""
         if path := self.path_calculator.find_path_without_rocks(target_stick):
             self._set_paths(path)
             return
@@ -88,48 +86,55 @@ class PathFinder(AIInterface):
         self._find_optimal_path_with_rocks(visible_target)
 
     def _find_optimal_path_with_rocks(self, target_pos: Position) -> None:
-        """Find optimal path considering rock removal.
-        Balances path length against number of rocks to remove."""
+        """Find optimal path considering rock removal."""
+        path = self._find_initial_path(target_pos)
+        if not path:
+            self._clear_paths()
+            return
+            
+        self._optimize_path_with_rocks(path, target_pos)
+
+    def _find_initial_path(self, target_pos: Position) -> Optional[List[Position]]:
+        """Find initial path using momentum heuristic."""
         current_direction = self._get_current_movement_direction()
         
         def momentum_heuristic(pos: Position) -> float:
             direction_change = self._calculate_direction_change(current_direction, pos)
-            return direction_change * 0.3  # Weight for direction changes
+            return direction_change * 0.3
             
-        if path := self.path_calculator.find_path_to_position(target_pos, heuristic=momentum_heuristic):
-            rocks_in_path = self.path_calculator.count_rocks_in_path(path)
-            
-            if rocks_in_path == 0:
-                self._set_paths(path)
-                return
-                
-            # Try to find a better path with fewer rocks
-            if alternative := self._find_best_alternative_path(rocks_in_path, target_pos):
-                alt_path, alt_score = alternative
-                current_score = len(path) + (STICK_VALUE * rocks_in_path)
-                
-                if alt_score < current_score:
-                    path = alt_path
-                    
+        return self.path_calculator.find_path_to_position(target_pos, heuristic=momentum_heuristic)
+
+    def _optimize_path_with_rocks(self, path: List[Position], target_pos: Position) -> None:
+        """Optimize path by potentially finding alternative with fewer rocks."""
+        rocks_in_path = self.path_calculator.count_rocks_in_path(path)
+        
+        if rocks_in_path == 0:
             self._set_paths(path)
+            return
+            
+        if alternative := self._find_best_alternative_path(rocks_in_path, target_pos):
+            alt_path, alt_score = alternative
+            current_score = len(path) + (STICK_VALUE * rocks_in_path)
+            
+            if alt_score < current_score:
+                path = alt_path
+                
+        self._set_paths(path)
 
     # Private Methods - Path Management
     def _clear_paths(self) -> None:
-        """Reset path information.
-        Clears current path and updates action handler."""
+        """Reset path information."""
         self.current_path = []
         self.action_handler.update(self.world, [])
 
     def _set_paths(self, path: List[Position]) -> None:
-        """Update path information with new path.
-        Skips current position and updates action handler."""
+        """Update path information with new path."""
         self.current_path = path[1:]  # Skip current position
         self.action_handler.update(self.world, path)
 
-    # Private Methods - Movement Calculation
+    # Private Methods - Movement & Direction
     def _calculate_movement(self) -> Position:
-        """Calculate the next movement based on current path.
-        Returns movement direction or NONE if no movement needed."""
+        """Calculate the next movement based on current path."""
         if not self.current_path:
             return Direction.NONE.value
             
@@ -147,18 +152,57 @@ class PathFinder(AIInterface):
         return movement
 
     def _get_movement_direction(self, dx: int, dy: int) -> Position:
-        """Convert position delta to movement direction.
-        Maps coordinate changes to cardinal directions."""
+        """Convert position delta to movement direction."""
         if dx > 0: return Direction.RIGHT.value
         if dx < 0: return Direction.LEFT.value
         if dy > 0: return Direction.DOWN.value
         if dy < 0: return Direction.UP.value
         return Direction.NONE.value
 
-    # Private Methods - State Validation
+    def _get_current_movement_direction(self) -> Direction:
+        """Get the current movement direction based on path or player facing."""
+        if len(self.current_path) >= 2:
+            current = self.current_path[0]
+            next_pos = self.current_path[1]
+            dx = next_pos[0] - current[0]
+            dy = next_pos[1] - current[1]
+            return self._vector_to_direction((dx, dy))
+        elif self.player and self.player.facing:
+            return self.player.facing
+        return Direction.NONE
+
+    def _vector_to_direction(self, vector: Position) -> Direction:
+        """Convert a movement vector to the closest cardinal direction."""
+        dx, dy = vector
+        if dx == 0 and dy == 0:
+            return Direction.NONE
+            
+        # Determine primary direction based on larger component
+        if abs(dx) > abs(dy):
+            return Direction.EAST if dx > 0 else Direction.WEST
+        else:
+            return Direction.SOUTH if dy > 0 else Direction.NORTH
+
+    def _calculate_direction_change(self, current_dir: Direction, next_pos: Position) -> float:
+        """Calculate the magnitude of direction change."""
+        if current_dir == Direction.NONE or not self.player:
+            return 0.0
+            
+        # Calculate new direction vector
+        dx = next_pos[0] - self.player.position[0]
+        dy = next_pos[1] - self.player.position[1]
+        if dx == 0 and dy == 0:
+            return 0.0
+            
+        new_dir = self._vector_to_direction((dx, dy))
+        
+        # Use direction values for comparison
+        current_vec = current_dir.value
+        new_vec = new_dir.value
+
+    # Private Methods - State & Validation
     def _has_valid_state(self) -> bool:
-        """Check if pathfinding prerequisites are met.
-        Ensures player exists and sticks are available."""
+        """Check if pathfinding prerequisites are met."""
         return (self.world.player and 
                 bool(sticks := self.path_calculator.find_sticks()))
 
@@ -172,24 +216,32 @@ class PathFinder(AIInterface):
         player_pos = self.world.player.position
         return min(sticks, key=lambda pos: abs(pos[0] - player_pos[0]) + abs(pos[1] - player_pos[1]))
 
-    # Private Methods - Position Calculations
-    def _normalize_vector(self, dx: int, dy: int) -> Tuple[float, float]:
-        """Normalize a vector to unit length while preserving direction."""
-        length = (dx * dx + dy * dy) ** 0.5
-        if length == 0:
-            return (0.0, 0.0)
-        return (dx / length, dy / length)
+    def _is_valid_position(self, pos: Position) -> bool:
+        """Check if a position is valid."""
+        if not (0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE):
+            return False
+        
+        cell = self.world.grid.get(pos)
+        return isinstance(cell, (Cell, Rock, Stick))
 
     def _is_valid_check_position(self, current_pos: Position, check_pos: Position) -> bool:
-        """Check if a position is valid for pathfinding and within view radius."""
+        """Check if a position is valid for pathfinding."""
         if not self._is_valid_position(check_pos):
             return False
         dx = abs(current_pos[0] - check_pos[0])
         dy = abs(current_pos[1] - check_pos[1])
         return dx + dy <= VIEW_RADIUS
 
+    # Private Methods - Position Calculations
+    def _normalize_vector(self, dx: int, dy: int) -> Tuple[float, float]:
+        """Normalize a vector to unit length."""
+        length = (dx * dx + dy * dy) ** 0.5
+        if length == 0:
+            return (0.0, 0.0)
+        return (dx / length, dy / length)
+
     def _score_position(self, pos: Position, target_pos: Position) -> float:
-        """Score position based on progress toward target and path safety."""
+        """Score position based on progress toward target."""
         progress_score = abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1])
         direction_alignment = self._calculate_direction_alignment(pos, target_pos)
         rock_density = self._calculate_local_rock_density(pos)
@@ -197,8 +249,7 @@ class PathFinder(AIInterface):
         return progress_score * (1 - direction_alignment * 0.3) * (1 + rock_density * 0.5)
 
     def _calculate_direction_alignment(self, pos: Position, target_pos: Position) -> float:
-        """Calculate how well aligned a position is with the target direction.
-        Returns value between 0 (poor alignment) and 1 (perfect alignment)."""
+        """Calculate direction alignment."""
         if pos == target_pos:
             return 1.0
             
@@ -221,8 +272,7 @@ class PathFinder(AIInterface):
         return 0.5  # Neutral alignment if no current direction
 
     def _calculate_local_rock_density(self, pos: Position) -> float:
-        """Calculate density of rocks in the immediate vicinity.
-        Returns value between 0 (no rocks) and 1 (surrounded by rocks)."""
+        """Calculate density of rocks in vicinity."""
         rocks_count = 0
         checked_cells = 0
         
@@ -237,6 +287,7 @@ class PathFinder(AIInterface):
         
         return rocks_count / checked_cells if checked_cells > 0 else 0
 
+    # Private Methods - Scanning & Search
     def _calculate_scan_vectors(self, current_pos: Position, target_pos: Position) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         """Calculate primary and secondary vectors for scanning."""
         primary_vector = self._normalize_vector(
@@ -255,38 +306,62 @@ class PathFinder(AIInterface):
         )
 
     def _find_best_visible_position(self, current_pos: Position, target_pos: Position) -> Optional[Position]:
-        """Find best position along vector to target within view radius."""
-        primary_vector, secondary_vector = self._calculate_scan_vectors(current_pos, target_pos)
-        
+        """Find best position along vector to target."""
+        vectors = self._calculate_scan_vectors(current_pos, target_pos)
+        return self._scan_for_best_position(current_pos, vectors, target_pos)
+
+    def _scan_for_best_position(
+        self, 
+        current_pos: Position, 
+        vectors: Tuple[Tuple[float, float], Tuple[float, float]],
+        target_pos: Position
+    ) -> Optional[Position]:
+        """Scan area for best position."""
+        primary_vector, secondary_vector = vectors
         best_pos = None
         best_score = float('inf')
         
-        # Scan along primary vector first, then fan out
         for d in range(VIEW_RADIUS + 1):
-            main_pos = (
-                current_pos[0] + int(primary_vector[0] * d),
-                current_pos[1] + int(primary_vector[1] * d)
+            main_pos = self._get_main_scan_position(current_pos, primary_vector, d)
+            best_pos, best_score = self._scan_perpendicular(
+                current_pos, main_pos, secondary_vector, d, best_pos, best_score, target_pos
             )
-            
-            # Fan out perpendicular to main vector
-            for offset in range(-d//2, d//2 + 1):
-                check_pos = self._calculate_check_position(main_pos, secondary_vector, offset)
-                
-                if self._is_valid_check_position(current_pos, check_pos):
-                    score = self._score_position(check_pos, target_pos)
-                    if score < best_score:
-                        best_score = score
-                        best_pos = check_pos
         
         return best_pos
 
-    def _is_valid_position(self, pos: Position) -> bool:
-        """Check if a position is valid (in bounds and walkable)."""
-        if not (0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE):
-            return False
-        
-        cell = self.world.grid.get(pos)
-        return isinstance(cell, (Cell, Rock, Stick))
+    def _get_main_scan_position(
+        self, 
+        current_pos: Position, 
+        primary_vector: Tuple[float, float], 
+        distance: int
+    ) -> Position:
+        """Calculate position along primary vector."""
+        return (
+            current_pos[0] + int(primary_vector[0] * distance),
+            current_pos[1] + int(primary_vector[1] * distance)
+        )
+
+    def _scan_perpendicular(
+        self,
+        current_pos: Position,
+        main_pos: Position,
+        secondary_vector: Tuple[float, float],
+        distance: int,
+        best_pos: Optional[Position],
+        best_score: float,
+        target_pos: Position
+    ) -> Tuple[Optional[Position], float]:
+        """Scan perpendicular to main vector."""
+        for offset in range(-distance//2, distance//2 + 1):
+            check_pos = self._calculate_check_position(main_pos, secondary_vector, offset)
+            
+            if self._is_valid_check_position(current_pos, check_pos):
+                score = self._score_position(check_pos, target_pos)
+                if score < best_score:
+                    best_score = score
+                    best_pos = check_pos
+                    
+        return best_pos, best_score
 
     def _find_best_alternative_path(self, max_rocks: int, target_pos: Position) -> Optional[Tuple[List[Position], int]]:
         """Find the path with the best score using fewer rocks."""
@@ -318,46 +393,3 @@ class PathFinder(AIInterface):
         super().update(world)
         if movement := self.get_movement():
             self._update_movement_history(movement)
-
-    # Private Methods - Direction Handling
-    def _get_current_movement_direction(self) -> Direction:
-        """Get the current movement direction based on path or player facing."""
-        if len(self.current_path) >= 2:
-            current = self.current_path[0]
-            next_pos = self.current_path[1]
-            dx = next_pos[0] - current[0]
-            dy = next_pos[1] - current[1]
-            return self._vector_to_direction((dx, dy))
-        elif self.player and self.player.facing:
-            return self.player.facing
-        return Direction.NONE
-
-    def _vector_to_direction(self, vector: Position) -> Direction:
-        """Convert a movement vector to the closest cardinal direction."""
-        dx, dy = vector
-        if dx == 0 and dy == 0:
-            return Direction.NONE
-            
-        # Determine primary direction based on larger component
-        if abs(dx) > abs(dy):
-            return Direction.EAST if dx > 0 else Direction.WEST
-        else:
-            return Direction.SOUTH if dy > 0 else Direction.NORTH
-
-    def _calculate_direction_change(self, current_dir: Direction, next_pos: Position) -> float:
-        """Calculate the magnitude of direction change to reach next position.
-        Returns value between 0 (same direction) and 1 (opposite direction)."""
-        if current_dir == Direction.NONE or not self.player:
-            return 0.0
-            
-        # Calculate new direction vector
-        dx = next_pos[0] - self.player.position[0]
-        dy = next_pos[1] - self.player.position[1]
-        if dx == 0 and dy == 0:
-            return 0.0
-            
-        new_dir = self._vector_to_direction((dx, dy))
-        
-        # Use direction values for comparison
-        current_vec = current_dir.value
-        new_vec = new_dir.value

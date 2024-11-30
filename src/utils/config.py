@@ -60,7 +60,7 @@ VIEW_RADIUS:            int = 4    # Cells visible around player
 PLAYER_MOVE_COOLDOWN: float = 0.002 # Seconds between allowed moves
 
 # Current Mode Settings
-DIFFICULTY:  Difficulty = Difficulty.EASY     # Current difficulty mode
+DIFFICULTY:  Difficulty = Difficulty.NORMAL     # Current difficulty mode
 CAMERA_MODE: CameraMode = CameraMode.FULL_MAP # Current camera mode
 
 # Display Configuration
