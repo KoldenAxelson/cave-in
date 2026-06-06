@@ -30,6 +30,9 @@ ENV/
 *.swp
 *.swo
 
+# Testing
+.pytest_cache/
+
 # Project specific
 proposed_changes.md
 

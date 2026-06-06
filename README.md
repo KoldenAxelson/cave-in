@@ -95,6 +95,22 @@ here only to show where the project might go.
 - The AI talks to the game through a small abstract interface, so new AI
   strategies can be dropped in without changing the core game.
 
+## Running the Tests
+
+The project has a `pytest` suite covering the pure game logic — movement rules,
+pathfinding/BFS, the flood-fill safety check, position scoring, and stat
+formatting. The tests run headless (no window opens), so they work anywhere.
+
+```bash
+source venv/bin/activate   # if not already active
+pip install pytest
+pytest
+```
+
+The test files live in `tests/`, with one file per area (e.g.
+`tests/test_pathfinding.py`). They are written to double as readable examples of
+how each piece is meant to behave.
+
 ## Code Style
 
 The code is meant to be read, so it follows a consistent style. See
