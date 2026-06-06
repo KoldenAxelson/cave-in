@@ -72,11 +72,12 @@ job, which makes the code easier to follow:
 
 ### Path Finder (work in progress)
 
-The Path Finder mode runs and no longer crashes — a bug where a `Direction` enum
-member was used instead of its value was just fixed. That said, it is still a
-work in progress: it picks reasonable moves toward sticks but is not optimized
-and will not always play well. Treat it as a learning example of pathfinding
-rather than a polished, finished AI.
+The Path Finder mode runs and plays a game through to completion — a bug where a
+`Direction` enum member was used instead of its value was just fixed. It steers
+toward sticks and clears rocks on its way. It is still labeled a work in progress
+because its decision-making hasn't been formally checked for optimality and a
+couple of internal pieces are worth revisiting (see Known Issues). Treat it as a
+solid learning example of pathfinding rather than a tuned, finished AI.
 
 ### Neural Network mode (planned, not started)
 
@@ -102,8 +103,11 @@ used throughout the project.
 
 ## Known Issues
 
-- **Path Finder is a work in progress.** It runs without crashing but is not
-  optimized and can make poor or repetitive moves.
+- **Path Finder optimality is unverified.** It runs and completes games, but its
+  move quality hasn't been formally measured. Two spots are worth a second look:
+  the binary search over rock count in `grid_scanner.py` (its scoring may not be
+  monotonic in the way binary search assumes), and the full path recomputation
+  every frame in `pathfinder.update()`.
 - The Neural Network mode mentioned above is not implemented.
 
 ## Contributing
