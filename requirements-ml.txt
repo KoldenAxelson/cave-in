@@ -1,0 +1,5 @@
+# Extra dependencies for the machine-learning controller (training + play).
+# Install with:  pip install -r requirements-ml.txt
+# The base game only needs pygame; these are not required for Normal/Path Finder.
+numpy
+torch

@@ -19,16 +19,19 @@ class GameWorld:
     stats: Optional[Stats] = None
     fill_manager: FillManager = field(default_factory=FillManager)
     difficulty: Difficulty = DIFFICULTY
+    # Number of sticks to seed at startup. Defaults to the global STICK_COUNT but
+    # can be overridden (e.g. by the ML trainer) without changing global config.
+    stick_count: int = STICK_COUNT
 
     def __post_init__(self) -> None:
         """Sets up the initial game grid with empty cells and seeds the sticks.
-        STICK_COUNT sticks are placed up front; collecting one always spawns a
+        `stick_count` sticks are placed up front; collecting one always spawns a
         replacement, so that many sticks stay on the board throughout play."""
         self.grid.update({
             position: Cell(position)
             for position in product(range(GRID_SIZE), range(GRID_SIZE))
         })
-        for _ in range(STICK_COUNT):
+        for _ in range(self.stick_count):
             self._place_random_stick()
 
     # Public Methods

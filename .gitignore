@@ -33,6 +33,10 @@ ENV/
 # Testing
 .pytest_cache/
 
+# Trained ML models ("brains") — generated artifacts; commit a known-good one
+# deliberately if you want it shipped.
+models/
+
 # Project specific
 proposed_changes.md
 

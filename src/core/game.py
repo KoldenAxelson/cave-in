@@ -115,6 +115,17 @@ class Game:
         if self.chosen_mode == "pathfinder":
             self.ai_controller = PathFinder(self.world)
             set_ai_controller(self.ai_controller)
+        elif self.chosen_mode == "neural":
+            # Imported lazily so the heavy ML dependency (PyTorch) only loads when
+            # this mode is actually chosen, not for normal/pathfinder play.
+            from src.ai.learning.neural_controller import NeuralController
+            from src.ai.learning.storage import BrainIncompatibleError
+            try:
+                self.ai_controller = NeuralController(self.world)
+            except BrainIncompatibleError as error:
+                print(error)               # fall back to manual control
+                self.ai_controller = None
+            set_ai_controller(self.ai_controller)
         else:
             set_ai_controller(None)
 

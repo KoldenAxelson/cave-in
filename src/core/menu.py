@@ -21,6 +21,7 @@ class StartMenu:
         self.items = [
             MenuItem("Normal Mode", self._start_normal_mode),
             MenuItem("Path Finder", self._start_pathfinder_mode),
+            MenuItem("Neural Net", self._start_neural_mode),
             MenuItem("Quit", self._quit_game)
         ]
         self.running = True
@@ -59,7 +60,12 @@ class StartMenu:
         """Sets up the game for AI-controlled pathfinder mode."""
         self.running = False
         self.chosen_action = "pathfinder"
-    
+
+    def _start_neural_mode(self):
+        """Sets up the game for the neural-network controller."""
+        self.running = False
+        self.chosen_action = "neural"
+
     def _quit_game(self):
         """Initiates the game exit sequence."""
         self.running = False
