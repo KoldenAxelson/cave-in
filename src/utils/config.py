@@ -80,6 +80,12 @@ WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  # Total window heig
 # also let a greedy agent bankrupt itself, so we keep it simple at 1.)
 ROCK_REMOVAL_COST: int = 1
 
+# How many sticks sit on the board at once. With 1 there is no routing decision
+# (you must go to the only stick); raising it gives an agent a real choice about
+# which stick to chase and in what order -- useful for comparing pathfinding
+# strategies and for training a learning-based controller.
+STICK_COUNT: int = 3
+
 # AI Configuration
 # --------------
 # Settings for AI behavior

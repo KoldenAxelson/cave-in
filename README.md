@@ -70,6 +70,18 @@ job, which makes the code easier to follow:
 
 `main.py` at the project root just creates a `Game` and runs it.
 
+### Tuning knobs
+
+A few gameplay constants in `config.py` are worth knowing about:
+
+- `STICK_COUNT` — how many sticks are on the board at once. At `1` there is no
+  routing decision; raise it to give an agent a real choice of which stick to
+  chase next.
+- `ROCK_REMOVAL_COST` — how many sticks it takes to clear a rock (see Game
+  Mechanics).
+- `STICK_VALUE` — how many steps the pathfinder treats one rock removal as being
+  worth when deciding whether to dig through or go around.
+
 ## AI Notes
 
 ### Path Finder (work in progress)

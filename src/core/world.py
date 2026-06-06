@@ -5,7 +5,7 @@ import random
 from itertools import product
 # Local imports
 from src.cells import Cell, Stick, Rock
-from src.utils.config import GRID_SIZE, Position, Difficulty, DIFFICULTY
+from src.utils.config import GRID_SIZE, Position, Difficulty, DIFFICULTY, STICK_COUNT
 from src.core.stats import Stats
 from src.utils.fill_manager import FillManager
 
@@ -21,12 +21,15 @@ class GameWorld:
     difficulty: Difficulty = DIFFICULTY
 
     def __post_init__(self) -> None:
-        """Sets up the initial game grid with empty cells and places the first stick."""
+        """Sets up the initial game grid with empty cells and seeds the sticks.
+        STICK_COUNT sticks are placed up front; collecting one always spawns a
+        replacement, so that many sticks stay on the board throughout play."""
         self.grid.update({
             position: Cell(position)
             for position in product(range(GRID_SIZE), range(GRID_SIZE))
         })
-        self._place_random_stick()
+        for _ in range(STICK_COUNT):
+            self._place_random_stick()
 
     # Public Methods
     def add(self, cell: Cell) -> None:

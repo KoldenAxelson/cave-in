@@ -4,7 +4,7 @@ import pytest
 
 from src.core.world import GameWorld
 from src.cells import Cell, Rock, Stick, Player
-from src.utils.config import GRID_SIZE, Difficulty
+from src.utils.config import GRID_SIZE, Difficulty, STICK_COUNT
 
 
 class TestInitialGrid:
@@ -12,13 +12,14 @@ class TestInitialGrid:
         world = GameWorld()
         assert len(world.grid) == GRID_SIZE * GRID_SIZE
 
-    def test_fresh_world_has_one_stick_and_one_rock(self):
-        # __post_init__ places exactly one rock (NORMAL difficulty) and one stick.
+    def test_fresh_world_seeds_stick_count_sticks_and_rocks(self):
+        # __post_init__ runs the stick placement STICK_COUNT times, and each
+        # placement also drops one rock (NORMAL difficulty).
         world = GameWorld()
         sticks = [c for c in world.grid.values() if isinstance(c, Stick)]
         rocks = [c for c in world.grid.values() if isinstance(c, Rock)]
-        assert len(sticks) == 1
-        assert len(rocks) == 1
+        assert len(sticks) == STICK_COUNT
+        assert len(rocks) == STICK_COUNT
 
 
 class TestBoardFull:
