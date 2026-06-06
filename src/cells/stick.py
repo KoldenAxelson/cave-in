@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 # Local imports
 from .cell import Cell
-from src.utils.config import Color, Position
+from src.utils.config import Color, ColorType
 
 @dataclass
 class Stick(Cell):
@@ -12,7 +12,7 @@ class Stick(Cell):
     When collected, a new stick is randomly placed elsewhere in the world."""
     
     # Core Attributes
-    color: Position = Color.BROWN.value  # Sticks are displayed as brown squares
+    color: ColorType = Color.BROWN.value  # Sticks are displayed as brown squares
 
     # Public Methods - Interaction
     def use(self, world) -> None:

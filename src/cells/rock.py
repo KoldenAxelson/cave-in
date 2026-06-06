@@ -30,6 +30,5 @@ class Rock(Cell):
     def _remove_rock(self, world) -> None:
         """Executes the rock removal process.
         Consumes one stick and replaces rock with an empty cell."""
-        world.stats.sticks_collected -= 1  # Consume one stick
-        # Replace rock with empty cell
+        world.stats.sticks_collected -= 1
         world.grid[self.position] = Cell(self.position)

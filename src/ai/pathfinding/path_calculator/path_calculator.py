@@ -39,8 +39,10 @@ class PathCalculator:
     ) -> Optional[List[Position]]:
         """Find path to target position using optional heuristic for path scoring."""
         start_pos = self.world.player.position
+        # We can remove at most as many rocks as we have sticks collected; with no
+        # stats available, allow unlimited removals
         max_rocks = self.world.stats.sticks_collected if self.world.stats else float('inf')
-        
+
         return self.path_search.breadth_first_search(
             start_pos, 
             target_pos, 

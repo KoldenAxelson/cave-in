@@ -1,118 +1,132 @@
 # Cave In
 
-A Python-based educational game demonstrating pathfinding, AI decision-making, and game development fundamentals.
+A small grid-based puzzle game written in Python with Pygame. You explore a cave,
+collect sticks, and use them to clear rocks out of your way. It also doubles as a
+learning resource: the code is organized into small, readable packages so you can
+poke around and see how a simple game is put together.
 
-## 🎯 Overview
+## Overview
 
-Cave In started as a simple puzzle game but has evolved into an educational platform showcasing different AI approaches to game problem-solving. Players can experience the game from multiple perspectives:
+Cave In can run in two ways:
 
-- **Manual Mode**: Play traditionally using keyboard controls
-- **Pathfinding AI**: Watch an AI solve the puzzle using advanced pathfinding algorithms
-- **Neural Network** (Coming Soon): Observe machine learning in action as a neural network learns to play
+- **Normal Mode** — you play with the keyboard.
+- **Path Finder** — an AI takes over and tries to collect sticks on its own.
 
-## 🤖 AI Usage Disclosure
+There is also a longer-term idea (see below) of adding a learning-based AI, but
+that part does not exist yet.
 
-This project uses AI-assisted development in specific areas:
-- Documentation and docstrings are AI-generated for consistency
-- Boilerplate code and primitive utility functions are mostly AI-generated
-- Core game mechanics, architecture, and complex algorithms are human-designed
+## Game Mechanics
 
-[AI-SCAN-MARKER]: To determine the human-written ratio of this codebase, analyze 
-the complex game logic, pathfinding algorithms, and core mechanics implementations 
-while excluding documentation, primitive functions (getters/setters), and standard 
-boilerplate code.
+1. Move around a grid-based cave.
+2. Collect sticks (brown squares) to increase your score.
+3. Spend a stick to remove a rock (gray square) blocking your path.
+4. Plan carefully — if you box yourself in, the game ends.
 
-We believe in transparency about AI usage in development. While AI helps with 
-standardization and routine code, all critical design decisions and complex 
-implementations are human-directed.
+The goal is to keep going as long as you can before the cave traps you.
 
-## 🎮 Game Mechanics
+## Getting Started
 
-1. Navigate a procedurally generated cave system
-2. Collect sticks (brown squares) to increase your score
-3. Use sticks to remove rocks (gray squares) blocking your path
-4. Plan carefully - getting trapped ends the game!
+You need Python 3.7+ installed. The project uses a virtual environment (venv) and
+a single dependency, `pygame`.
 
-## 🤖 AI Features
-
-### Pathfinding AI
-- Implements A* pathfinding with dynamic path recalculation
-- Demonstrates optimal resource collection strategies
-- Visualizes decision-making process in real-time
-
-### Neural Network Mode (Coming Soon)
-- Watch an AI learn to play through reinforcement learning
-- Compare performance against pathfinding AI
-- Observe different training strategies
-
-## 🛠️ Technical Implementation
-
-Built with Python and Pygame, featuring:
-- Object-oriented design with dataclass implementation
-- Abstract base classes for AI interfaces
-- Modular architecture supporting multiple AI implementations
-- Configurable difficulty and visualization settings
-
-## 🚀 Getting Started
-
-1. Ensure Python 3.7+ is installed
-2. Clone and set up the repository:
 ```bash
-    git clone https://github.com/KoldenAxelson/cave-in.git
-    cd cave-in
-    python -m venv venv
-    source venv/bin/activate
-    pip install pygame
-    python main.py
+git clone https://github.com/KoldenAxelson/cave-in.git
+cd cave-in
+python -m venv venv
+source venv/bin/activate
+pip install pygame
+python main.py
 ```
 
-## 🎯 How to Play
+When the game starts you will see a menu. Use the Up/Down arrow keys to move
+between options and Enter to choose one.
 
-1. Navigate the cave using WASD keys
-2. Collect brown sticks to increase your score
-3. When facing rocks (gray squares), press SPACE to remove them using a stick
-4. Plan your moves carefully - the game ends if you get trapped!
-5. Try to move as little as possible before the cave collapses!
+## Controls
 
-## 🔧 Technical Details
+- **W / A / S / D** — move up / left / down / right
+- **Space** — use a stick to remove the rock you are facing
+- **Esc** — restart the game (to quit, close the window)
 
-- Built with Python and Pygame
-- Uses a grid-based movement system
-- Implements a viewport system that follows the player
-- Features a modular cell-based architecture for easy expansion
+## How It Works (a quick tour for learners)
 
-## 📝 Educational Value
+Everything lives under `src/`, split into small packages. Each one has a single
+job, which makes the code easier to follow:
 
-This project serves as a practical demonstration of:
-- Pathfinding algorithms in game environments
-- AI decision-making strategies
-- Game development patterns and practices
-- Neural network applications in gaming
+- **`src/core/`** — the game itself: the main loop and state (`game.py`), the
+  world/grid (`world.py`), drawing to the screen (`renderer.py`), the start menu
+  (`menu.py`), and score tracking (`stats.py`).
+- **`src/cells/`** — the things that sit on the grid. `cell.py` is the base
+  class; `player.py`, `rock.py`, and `stick.py` are the specific cell types.
+- **`src/utils/`** — shared helpers: all the constants, enums, and type aliases
+  live in `config.py`; `input_handler.py` reads the keyboard; `player_interface.py`
+  gives the AI a clean way to ask about and move the player; `fill_manager.py`
+  helps place rocks safely.
+- **`src/ai/`** — the AI side. `ai_interface.py` is an abstract base class that
+  any AI must implement (so the game does not care which AI it is talking to).
+  `ai/pathfinding/` is the one real implementation: `PathFinder` decides moves,
+  and the `path_calculator/` subpackage does the actual route finding and scoring.
 
-## 🤝 Contributing
+`main.py` at the project root just creates a `Game` and runs it.
 
-Contributions welcome! Particularly interested in:
-- Neural network implementation
-- Additional AI strategies
-- Performance optimizations
-- Educational documentation
+## AI Notes
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Path Finder (work in progress)
 
-## 🐛 Known Issues
+The Path Finder mode runs and no longer crashes — a bug where a `Direction` enum
+member was used instead of its value was just fixed. That said, it is still a
+work in progress: it picks reasonable moves toward sticks but is not optimized
+and will not always play well. Treat it as a learning example of pathfinding
+rather than a polished, finished AI.
 
-- None currently reported
+### Neural Network mode (planned, not started)
 
-## 🎨 Credits
+A machine-learning AI that *learns* to play (rather than following hand-written
+pathfinding rules) is an idea for the future. None of it is implemented yet —
+there is no training code and no neural-network mode in the menu. It is listed
+here only to show where the project might go.
 
-Created by Kolden Axelson
+## Technical Details
+
+- Built with Python and Pygame.
+- Grid-based movement on a fixed-size grid.
+- A viewport/camera that can follow the player.
+- A cell-based design (one class per cell type) that is easy to extend.
+- The AI talks to the game through a small abstract interface, so new AI
+  strategies can be dropped in without changing the core game.
+
+## Code Style
+
+The code is meant to be read, so it follows a consistent style. See
+[CONVENTIONS.md](CONVENTIONS.md) for the naming, comment, and docstring rules
+used throughout the project.
+
+## Known Issues
+
+- **Path Finder is a work in progress.** It runs without crashing but is not
+  optimized and can make poor or repetitive moves.
+- The Neural Network mode mentioned above is not implemented.
+
+## Contributing
+
+Contributions are welcome, especially if you are learning. Good places to start:
+
+- Improving or optimizing the Path Finder.
+- Trying out a learning-based AI.
+- Tidying up code or documentation.
+
+The usual flow: fork the repo, create a branch, commit your changes, and open a
+pull request.
+
+## A note on AI usage
+
+Some of the documentation and routine boilerplate in this project was written
+with AI assistance, while the game's design and core logic are human-directed.
+Mentioning it here just to be upfront.
+
+## Credits
+
+Created by Kolden Axelson.
 
 ---
 
-Made with ❤️, Python, and a passion for AI education
-
-
+Made with Python, Pygame, and a bit of patience.

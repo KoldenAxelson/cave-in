@@ -13,7 +13,7 @@ class Cell:
     
     # Core Attributes
     position: Position  # (x, y) coordinates in the game grid
-    color: ColorType = Color.D_GRAY.value  # RGB color tuple for cell rendering
+    color: ColorType = Color.DARK_GRAY.value  # RGB color tuple for cell rendering
 
     # Public Methods - Game Logic
     def update(self, world) -> None:
@@ -38,6 +38,8 @@ class Cell:
         """Creates a pygame Rect for the cell with proper margins.
         Calculates dimensions to ensure consistent spacing between cells."""
         screen_x, screen_y = screen_pos
+        # Inset the rect by the margin on every side so neighbouring cells
+        # have a visible gap between them.
         return pygame.Rect(
             screen_x + margin,
             screen_y + margin,

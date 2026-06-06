@@ -107,14 +107,16 @@ class PathFinder(AIInterface):
             self.player.facing if self.player else None
         )
         
+        # Momentum heuristic: gently penalize turns so the AI prefers to keep
+        # moving in its current direction, producing smoother, more natural paths
         def momentum_heuristic(pos: Position) -> float:
             direction_change = self.vector_math.calculate_direction_change(
-                current_direction, 
+                current_direction,
                 pos,
                 self.player.position
             )
             return direction_change * 0.3
-            
+
         return self.path_calculator.find_path_to_position(target_pos, heuristic=momentum_heuristic)
 
     def _optimize_path_with_rocks(self, path: List[Position], target_pos: Position) -> None:
@@ -126,17 +128,19 @@ class PathFinder(AIInterface):
             return
             
         if alternative := self.grid_scanner.find_best_alternative_path(
-            rocks_in_path, 
+            rocks_in_path,
             target_pos,
             self.path_calculator,
             STICK_VALUE
         ):
             alt_path, alt_score = alternative
+            # Score = path length plus a per-rock penalty (sticks spent digging).
+            # Only switch to the alternative if it is genuinely cheaper overall.
             current_score = len(path) + (STICK_VALUE * rocks_in_path)
-            
+
             if alt_score < current_score:
                 path = alt_path
-                
+
         self._set_paths(path)
 
     # Private Methods - Path Management
@@ -157,11 +161,11 @@ class PathFinder(AIInterface):
             
         next_pos = self.current_path[0]
         current_pos = self.player.position
-        
-        dx = next_pos[0] - current_pos[0]
-        dy = next_pos[1] - current_pos[1]
-        
-        movement = self.vector_math.get_movement_direction(dx, dy)
+
+        delta_x = next_pos[0] - current_pos[0]
+        delta_y = next_pos[1] - current_pos[1]
+
+        movement = self.vector_math.get_movement_direction(delta_x, delta_y)
         
         if movement != Direction.NONE.value and self.player.try_move(movement):
             self.current_path.pop(0)

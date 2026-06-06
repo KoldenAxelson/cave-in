@@ -23,7 +23,8 @@ class GameWorld:
     def __post_init__(self) -> None:
         """Sets up the initial game grid with empty cells and places the first stick."""
         self.grid.update({
-            pos: Cell(pos) for pos in product(range(GRID_SIZE), range(GRID_SIZE))
+            position: Cell(position)
+            for position in product(range(GRID_SIZE), range(GRID_SIZE))
         })
         self._place_random_stick()
 
@@ -40,7 +41,7 @@ class GameWorld:
     def is_board_full(self) -> bool:
         """Checks if there are any empty cells remaining in the grid."""
         empty_positions = [
-            pos for pos, cell in self.grid.items()
+            position for position, cell in self.grid.items()
             if type(cell) == Cell
         ]
         return len(empty_positions) == 0
@@ -49,11 +50,11 @@ class GameWorld:
     def _place_random_stick(self) -> None:
         """Places a new stick and potentially a rock in the game world."""
         self._place_random_rock()
-        
+
         empty_positions = self._get_empty_positions()
         if empty_positions:
-            stick_pos = random.choice(empty_positions)
-            self.grid[stick_pos] = Stick(stick_pos)
+            stick_position = random.choice(empty_positions)
+            self.grid[stick_position] = Stick(stick_position)
 
     def _place_random_rock(self) -> None:
         """Handles rock placement based on the current difficulty setting."""
@@ -68,21 +69,21 @@ class GameWorld:
 
     def _place_normal_rock(self, empty_positions: List[Position]) -> None:
         """Places a rock with random chance in normal difficulty."""
-        rock_pos = random.choice(empty_positions)
-        self.grid[rock_pos] = Rock(rock_pos)
+        rock_position = random.choice(empty_positions)
+        self.grid[rock_position] = Rock(rock_position)
 
     def _place_easy_rock(self, empty_positions: List[Position]) -> None:
         """Places a rock in a position that won't trap the player."""
         random.shuffle(empty_positions)
-        for pos in empty_positions:
-            if self.fill_manager.is_safe_rock_position(self, pos):
-                self.grid[pos] = Rock(pos)
+        for candidate_position in empty_positions:
+            if self.fill_manager.is_safe_rock_position(self, candidate_position):
+                self.grid[candidate_position] = Rock(candidate_position)
                 break
 
     # Private Methods - Utility
     def _get_empty_positions(self) -> List[Position]:
         """Returns all grid positions that contain only basic cells."""
         return [
-            pos for pos, cell in self.grid.items()
+            position for position, cell in self.grid.items()
             if type(cell) == Cell
         ]

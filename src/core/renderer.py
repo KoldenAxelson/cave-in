@@ -50,13 +50,14 @@ class Renderer:
     def _draw_visible_cells(self, game_surface: pygame.Surface, world: GameWorld, view_bounds: Tuple[int, int, int, int]) -> None:
         """Renders all cells within the current view boundaries."""
         view_start_x, view_start_y, view_end_x, view_end_y = view_bounds
-        
-        for y in range(view_start_y, view_end_y):
-            for x in range(view_start_x, view_end_x):
-                screen_pos = self._get_screen_position((x, y), (view_start_x, view_start_y))
-                
-                if 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE:
-                    cell = world.grid.get((x, y))
+
+        for grid_y in range(view_start_y, view_end_y):
+            for grid_x in range(view_start_x, view_end_x):
+                screen_pos = self._get_screen_position((grid_x, grid_y), (view_start_x, view_start_y))
+
+                # Positions outside the grid are drawn as empty space (None).
+                if 0 <= grid_x < GRID_SIZE and 0 <= grid_y < GRID_SIZE:
+                    cell = world.grid.get((grid_x, grid_y))
                     self._draw_cell(game_surface, screen_pos, cell)
                 else:
                     self._draw_cell(game_surface, screen_pos, None)
@@ -76,31 +77,11 @@ class Renderer:
             )
             pygame.draw.rect(surface, Color.BLACK.value, rect)
 
-    def _draw_empty_cell(self, surface: pygame.Surface, screen_pos: Position) -> None:
-        """Renders a black rectangle representing an empty cell."""
-        if CAMERA_MODE == CameraMode.FULL_MAP:
-            cell_size = min(
-                WINDOW_WIDTH // GRID_SIZE,
-                GAME_WINDOW_HEIGHT // GRID_SIZE
-            )
-            margin = max(1, MARGIN * cell_size // CELL_SIZE)
-        else:
-            cell_size = CELL_SIZE
-            margin = MARGIN
-            
-        rect = pygame.Rect(
-            screen_pos[0] + margin,
-            screen_pos[1] + margin,
-            cell_size - (2 * margin),
-            cell_size - (2 * margin)
-        )
-        pygame.draw.rect(surface, Color.BLACK.value, rect)
-
     # UI rendering related methods
     def _draw_score_section(self, surface: pygame.Surface, stats: Stats) -> None:
         """Renders the score panel including background, separator line, and statistics."""
         score_rect = pygame.Rect(0, 0, WINDOW_WIDTH, SCORE_HEIGHT)
-        pygame.draw.rect(surface, Color.D_GRAY.value, score_rect)
+        pygame.draw.rect(surface, Color.DARK_GRAY.value, score_rect)
         
         pygame.draw.line(
             surface,
@@ -145,28 +126,29 @@ class Renderer:
     # Utility methods
     def _get_screen_position(self, world_pos: Position, view_start: Position) -> Position:
         """Translates world coordinates to screen coordinates based on current view."""
-        x, y = world_pos
-        view_x, view_y = view_start
-        
+        world_x, world_y = world_pos
+        view_start_x, view_start_y = view_start
+
         if CAMERA_MODE == CameraMode.FULL_MAP:
             cell_size = min(
                 WINDOW_WIDTH // GRID_SIZE,
                 GAME_WINDOW_HEIGHT // GRID_SIZE
             )
+            # Center the whole grid within the available game area.
             offset_x = (WINDOW_WIDTH - (GRID_SIZE * cell_size)) // 2
             offset_y = (GAME_WINDOW_HEIGHT - (GRID_SIZE * cell_size)) // 2
-            return (x * cell_size + offset_x, y * cell_size + offset_y)
-            
-        return ((x - view_x) * CELL_SIZE, (y - view_y) * CELL_SIZE)
+            return (world_x * cell_size + offset_x, world_y * cell_size + offset_y)
+
+        return ((world_x - view_start_x) * CELL_SIZE, (world_y - view_start_y) * CELL_SIZE)
 
     def _get_view_bounds(self, player_pos: Position) -> Tuple[int, int, int, int]:
         """Calculates the visible area boundaries based on player position and camera mode."""
         if CAMERA_MODE == CameraMode.FULL_MAP:
             return 0, 0, GRID_SIZE, GRID_SIZE
             
-        px, py = player_pos
-        view_start_x = px - VIEW_RADIUS
-        view_start_y = py - VIEW_RADIUS
+        player_x, player_y = player_pos
+        view_start_x = player_x - VIEW_RADIUS
+        view_start_y = player_y - VIEW_RADIUS
         view_end_x = view_start_x + VIEW_RADIUS * 2 + 1
         view_end_y = view_start_y + VIEW_RADIUS * 2 + 1
         return view_start_x, view_start_y, view_end_x, view_end_y

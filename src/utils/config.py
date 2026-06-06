@@ -17,7 +17,7 @@ VisitedType: TypeAlias = Set[Tuple[Position, Tuple[Position, ...]]] # AI pathfin
 # Core game enums defining valid states and modes
 class Direction(Enum):
     """Cardinal directions for player movement and facing.
-    Each direction maps to a (dx, dy) tuple for position updates."""
+    Each direction maps to a (delta_x, delta_y) tuple for position updates."""
     UP    = ( 0,-1)
     RIGHT = ( 1, 0)
     DOWN  = ( 0, 1)
@@ -42,8 +42,8 @@ class Color(Enum):
     BLACK:  ColorType = (  0,   0,   0)
     WHITE:  ColorType = (255, 255, 255)
     GRAY:   ColorType = (128, 128, 128)
-    L_GRAY: ColorType = (200, 200, 200)
-    D_GRAY: ColorType = ( 56,  56,  56)
+    LIGHT_GRAY: ColorType = (200, 200, 200)
+    DARK_GRAY:  ColorType = ( 56,  56,  56)
     RED:    ColorType = (255,   0,   0)
     GREEN:  ColorType = (  0, 255,   0)
     BLUE:   ColorType = (  0,   0, 255)

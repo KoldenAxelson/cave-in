@@ -28,10 +28,10 @@ class Player(Cell):
         if time.time() - self.last_move_time < self.move_cooldown:
             return
         
-        delta = get_movement()
-        if any(delta):  # If there is any movement input
-            self.update_facing(delta)
-            self.try_move(world, delta)
+        movement_delta = get_movement()
+        if any(movement_delta):  # any non-zero component means the player pressed a direction
+            self.update_facing(movement_delta)
+            self.try_move(world, movement_delta)
         
         if use_action():
             self.try_use_facing_cell(world)
@@ -51,9 +51,9 @@ class Player(Cell):
         if not self._can_move_now():
             return False
             
-        new_pos = self._calculate_new_position(delta)
-        if self._is_valid_move(world, new_pos):
-            self._perform_move(world, new_pos)
+        target_position = self._calculate_new_position(delta)
+        if self._is_valid_move(world, target_position):
+            self._perform_move(world, target_position)
             return True
         return False
 
@@ -63,12 +63,12 @@ class Player(Cell):
         if not self.facing:
             return False
             
-        dx, dy = self.facing.value
-        px, py = self.position
-        target_pos = (px + dx, py + dy)
-        
-        if 0 <= target_pos[0] < GRID_SIZE and 0 <= target_pos[1] < GRID_SIZE:
-            target_cell = world.grid.get(target_pos)
+        facing_delta_x, facing_delta_y = self.facing.value
+        player_x, player_y = self.position
+        target_position = (player_x + facing_delta_x, player_y + facing_delta_y)
+
+        if 0 <= target_position[0] < GRID_SIZE and 0 <= target_position[1] < GRID_SIZE:
+            target_cell = world.grid.get(target_position)
             if hasattr(target_cell, 'use'):
                 target_cell.use(world)
                 return True
@@ -91,27 +91,31 @@ class Player(Cell):
     def _calculate_new_position(self, delta: Position) -> Position:
         """Calculates potential new position while respecting grid boundaries.
         Clamps coordinates to valid grid range."""
-        x, y = self.position
-        dx, dy = delta
+        current_x, current_y = self.position
+        delta_x, delta_y = delta
+        # Clamp to the grid so the player can never step outside the world edges.
         return (
-            max(0, min(GRID_SIZE - 1, x + dx)),
-            max(0, min(GRID_SIZE - 1, y + dy))
+            max(0, min(GRID_SIZE - 1, current_x + delta_x)),
+            max(0, min(GRID_SIZE - 1, current_y + delta_y))
         )
 
-    def _is_valid_move(self, world, new_pos: Position) -> bool:
+    def _is_valid_move(self, world, target_position: Position) -> bool:
         """Validates if a move to the target position is allowed.
         Checks for collisions and ensures target is an empty cell."""
-        target_cell = world.grid[new_pos]
-        return (new_pos != self.position and 
-                isinstance(target_cell, Cell) and 
+        target_cell = world.grid[target_position]
+        # `type(...) == Cell` (not isinstance) deliberately rejects subclasses
+        # like Rock/Stick: only a plain empty Cell is walkable.
+        return (target_position != self.position and
+                isinstance(target_cell, Cell) and
                 type(target_cell) == Cell)
 
-    def _perform_move(self, world, new_pos: Position) -> None:
+    def _perform_move(self, world, target_position: Position) -> None:
         """Executes the movement to a new position.
         Updates grid state, position, and movement statistics."""
+        # Leave behind an empty cell where the player was standing.
         world.grid[self.position] = Cell(self.position)
-        self.position = new_pos
-        world.grid[new_pos] = self
+        self.position = target_position
+        world.grid[target_position] = self
         self.last_move_time = time.time()
         
         if world.stats:
@@ -124,13 +128,14 @@ class Player(Cell):
         screen_x, screen_y = screen_pos
         center_x = screen_x + cell_size // 2
         center_y = screen_y + cell_size // 2
-        dx, dy = self.facing.value
-        indicator_x = center_x + dx * (cell_size // 4)
-        indicator_y = center_y + dy * (cell_size // 4)
+        facing_delta_x, facing_delta_y = self.facing.value
+        # Push the indicator a quarter-cell toward the facing direction.
+        indicator_x = center_x + facing_delta_x * (cell_size // 4)
+        indicator_y = center_y + facing_delta_y * (cell_size // 4)
         return (indicator_x, indicator_y)
 
-    def _draw_direction_indicator(self, surface: pygame.Surface, pos: Position, cell_size: int) -> None:
+    def _draw_direction_indicator(self, surface: pygame.Surface, indicator_position: Position, cell_size: int) -> None:
         """Renders the direction indicator as a white circle.
         Size scales with cell size for consistent appearance."""
-        indicator_size = max(2, cell_size // 10)
-        pygame.draw.circle(surface, Color.WHITE.value, pos, indicator_size)
+        indicator_radius = max(2, cell_size // 10)  # never smaller than 2px so it stays visible
+        pygame.draw.circle(surface, Color.WHITE.value, indicator_position, indicator_radius)

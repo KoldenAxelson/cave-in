@@ -20,40 +20,48 @@ class PathSearch:
         max_rocks: int = 0
     ) -> Optional[List[Position]]:
         """Performs BFS pathfinding with configurable rock handling."""
-        # Initialize based on whether we're allowing rocks
+        # Two BFS variants share this method. When rocks may be removed, each
+        # search state must also track WHICH rocks were removed, so the queue
+        # entries and the visited set carry that extra dimension; otherwise a
+        # plain position-based BFS is enough.
         if max_rocks > 0:
             queue = [(start, [start], set())]
             visited = {(start, tuple())}
         else:
             queue = [(start, [start])]
             visited = {start}
-        
+
         best_path = None
         best_length = float('inf')
-        
+
         while queue:
             if max_rocks > 0:
+                # Rock-removal variant: keep searching for the shortest path
+                # rather than returning on first arrival, since a later path may
+                # reach the target while removing fewer/cheaper rocks.
                 current, path, removed_rocks = queue.pop(0)
-                
+
                 if self._should_skip_path(path, best_length):
                     continue
-                    
+
                 if self._is_target_reached(current, target_pos):
                     best_path, best_length = self._update_best_path(path, best_length)
                     continue
-                    
+
                 self.explore_neighbors(
                     current, path, removed_rocks, max_rocks, visited, queue
                 )
             else:
+                # Rock-free variant: standard BFS, so the first time we reach the
+                # target it is guaranteed to be a shortest path.
                 current, path = queue.pop(0)
                 if current == target_pos:
                     return path
-                    
+
                 self.explore_rock_free_neighbors(
                     current, path, visited, queue
                 )
-        
+
         return best_path if max_rocks > 0 else None
 
     def explore_neighbors(
@@ -114,35 +122,39 @@ class PathSearch:
         """Attempts to extend path through a given position."""
         if not self._is_valid_path_extension(next_pos, removed_rocks, max_rocks):
             return None
-            
-        new_removed = self._update_removed_rocks(next_pos, removed_rocks)
-        state = (next_pos, tuple(sorted(new_removed)))
-        
+
+        updated_removed_rocks = self._update_removed_rocks(next_pos, removed_rocks)
+        # The visited key is (position, removed-rocks): the same cell reached with
+        # a different set of removed rocks is a genuinely different search state,
+        # so sorting makes the set hashable and order-independent.
+        state = (next_pos, tuple(sorted(updated_removed_rocks)))
+
         if state not in visited:
             visited.add(state)
-            new_path = current_path + [next_pos]
-            return (next_pos, new_path, new_removed)
-            
+            extended_path = current_path + [next_pos]
+            return (next_pos, extended_path, updated_removed_rocks)
+
         return None
 
     def _is_valid_path_extension(
-        self, 
-        pos: Position, 
+        self,
+        pos: Position,
         removed_rocks: Set[Position],
         max_rocks: int
     ) -> bool:
         """Check if position can be added to path."""
+        # A rock can only be stepped onto if we still have removal budget left
         if self.grid_analyzer.is_rock(pos):
             return len(removed_rocks) < max_rocks
         return True
 
     def _update_removed_rocks(
-        self, 
-        pos: Position, 
+        self,
+        pos: Position,
         removed_rocks: Set[Position]
     ) -> Set[Position]:
         """Update set of removed rocks if position contains rock."""
-        new_removed = removed_rocks.copy()
+        updated_removed_rocks = removed_rocks.copy()
         if self.grid_analyzer.is_rock(pos):
-            new_removed.add(pos)
-        return new_removed 
+            updated_removed_rocks.add(pos)
+        return updated_removed_rocks

@@ -81,8 +81,8 @@ class StartMenu:
 
     def _draw_menu_items(self):
         """Manages the rendering of all menu options."""
-        for i, item in enumerate(self.items):
-            self._draw_single_item(i, item)
+        for item_index, item in enumerate(self.items):
+            self._draw_single_item(item_index, item)
 
     def _draw_single_item(self, index: int, item: MenuItem):
         """Renders one menu item with appropriate highlighting if selected."""

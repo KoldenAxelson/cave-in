@@ -42,7 +42,8 @@ class GridScanner:
             target_pos[0] - current_pos[0],
             target_pos[1] - current_pos[1]
         )
-        # Calculate perpendicular vector for secondary scanning
+        # The secondary vector is the primary rotated 90 degrees, used to sweep
+        # sideways across the line toward the target
         secondary_vector = (-primary_vector[1], primary_vector[0])
         return primary_vector, secondary_vector
 
@@ -56,13 +57,15 @@ class GridScanner:
         primary_vector, secondary_vector = vectors
         best_pos = None
         best_score = float('inf')
-        
-        for d in range(VIEW_RADIUS + 1):
-            main_pos = self.get_main_scan_position(current_pos, primary_vector, d)
+
+        # Step outward along the primary vector; at each step sweep perpendicular.
+        # The sweep widens with distance, scanning a triangular fan toward the target.
+        for distance in range(VIEW_RADIUS + 1):
+            main_pos = self.get_main_scan_position(current_pos, primary_vector, distance)
             best_pos, best_score = self.scan_perpendicular(
-                current_pos, main_pos, secondary_vector, d, best_pos, best_score, target_pos
+                current_pos, main_pos, secondary_vector, distance, best_pos, best_score, target_pos
             )
-        
+
         return best_pos
 
     def get_main_scan_position(
@@ -100,16 +103,18 @@ class GridScanner:
         target_pos: Position
     ) -> Tuple[Optional[Position], float]:
         """Scan perpendicular to main vector."""
+        # Sweep half the current distance to either side, so the scanned fan
+        # widens the further out we step along the primary vector
         for offset in range(-distance//2, distance//2 + 1):
             check_pos = self.calculate_check_position(main_pos, secondary_vector, offset)
-            
+
             if self.position_scorer.is_valid_check_position(current_pos, check_pos, VIEW_RADIUS):
                 score = self.position_scorer.score_position(check_pos, target_pos)
                 if score < best_score:
                     best_score = score
                     best_pos = check_pos
-                    
-        return best_pos, best_score 
+
+        return best_pos, best_score
 
     def find_best_alternative_path(
         self, 
@@ -122,17 +127,22 @@ class GridScanner:
         best_path = None
         best_score = float('inf')
 
-        # Binary search for optimal rock count
-        left, right = 0, max_rocks
-        while left <= right:
-            mid = (left + right) // 2
-            if path := path_calculator.find_path_with_max_rocks(mid, target_pos):
-                score = (stick_value * mid) + len(path)
+        # Binary search over the rock-removal budget. A path that succeeds with
+        # some budget will also succeed with a larger one, so the feasibility is
+        # monotonic and we can binary search for the smallest budget that works.
+        # Removing rocks is costly (stick_value each), so fewer rocks tends to
+        # score better; when a budget yields a path we record it and try smaller
+        # budgets, otherwise we raise the budget.
+        min_rocks, max_rocks_allowed = 0, max_rocks
+        while min_rocks <= max_rocks_allowed:
+            rock_budget = (min_rocks + max_rocks_allowed) // 2
+            if path := path_calculator.find_path_with_max_rocks(rock_budget, target_pos):
+                score = (stick_value * rock_budget) + len(path)
                 if score < best_score:
                     best_score = score
                     best_path = path
-                right = mid - 1
+                max_rocks_allowed = rock_budget - 1
             else:
-                left = mid + 1
+                min_rocks = rock_budget + 1
 
         return (best_path, best_score) if best_path else None

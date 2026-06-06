@@ -27,35 +27,39 @@ class PositionScorer:
         current_movement: Position = None
     ) -> float:
         """Score position based on progress toward target."""
+        # Manhattan distance to the target — the base cost, lower is better
         progress_score = abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1])
         direction_alignment = self.vector_math.calculate_direction_alignment(
             pos, target_pos, current_movement
         )
         rock_density = self.calculate_local_rock_density(pos)
-        
+
+        # Reward heading toward the target (up to 30% discount) and penalize
+        # rock-dense neighborhoods (up to 50% surcharge); lower scores win
         return progress_score * (1 - direction_alignment * 0.3) * (1 + rock_density * 0.5)
 
     def calculate_local_rock_density(self, pos: Position) -> float:
         """Calculate density of rocks in vicinity."""
         rocks_count = 0
         checked_cells = 0
-        
-        # Check 5x5 area centered on position
-        for dx in range(-2, 3):
-            for dy in range(-2, 3):
-                check_pos = (pos[0] + dx, pos[1] + dy)
+
+        # Sample the 5x5 block centered on the position
+        for delta_x in range(-2, 3):
+            for delta_y in range(-2, 3):
+                check_pos = (pos[0] + delta_x, pos[1] + delta_y)
                 if self.is_valid_position(check_pos):
                     checked_cells += 1
                     if isinstance(self.world.grid.get(check_pos), Rock):
                         rocks_count += 1
-        
+
         return rocks_count / checked_cells if checked_cells > 0 else 0
 
     def is_valid_position(self, pos: Position) -> bool:
         """Check if a position is valid."""
-        if not (0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE):
+        column, row = pos
+        if not (0 <= column < GRID_SIZE and 0 <= row < GRID_SIZE):
             return False
-        
+
         cell = self.world.grid.get(pos)
         return isinstance(cell, (Cell, Rock, Stick))
 
@@ -68,9 +72,10 @@ class PositionScorer:
         """Check if a position is valid for pathfinding within view radius."""
         if not self.is_valid_position(check_pos):
             return False
-        dx = abs(current_pos[0] - check_pos[0])
-        dy = abs(current_pos[1] - check_pos[1])
-        return dx + dy <= view_radius
+        # Manhattan distance must stay within the view radius
+        column_distance = abs(current_pos[0] - check_pos[0])
+        row_distance = abs(current_pos[1] - check_pos[1])
+        return column_distance + row_distance <= view_radius
 
     def get_manhattan_distance(
         self,

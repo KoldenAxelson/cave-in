@@ -26,22 +26,23 @@ class PlayerInterface:
         return self.world.player.facing if self.world.player else None
     
     # Public Methods - Movement
-    def try_move(self, delta: Position) -> bool:
+    def try_move(self, movement_delta: Position) -> bool:
         """Attempts to move the player by the given delta.
         Updates facing direction and returns True if movement was successful."""
         if not self.world.player:
             return False
-        self.world.player.update_facing(delta)
-        return self.world.player.try_move(self.world, delta)
-    
-    def is_valid_move(self, target_pos: Position) -> bool:
+        self.world.player.update_facing(movement_delta)
+        return self.world.player.try_move(self.world, movement_delta)
+
+    def is_valid_move(self, target_position: Position) -> bool:
         """Checks if a move to the target position is valid.
         Ensures target is empty and different from current position."""
         if not self.world.player:
             return False
-        target_cell = self.world.grid.get(target_pos)
-        return (target_pos != self.position and 
-                isinstance(target_cell, Cell) and 
+        target_cell = self.world.grid.get(target_position)
+        # An empty floor tile is exactly type Cell; rocks/sticks are subclasses
+        return (target_position != self.position and
+                isinstance(target_cell, Cell) and
                 type(target_cell) == Cell)
     
     # Public Methods - Actions
@@ -51,21 +52,21 @@ class PlayerInterface:
         if not self.world.player:
             return False
         
-        target_pos = self._get_target_position()
-        return self._try_use_target(target_pos)
+        target_position = self._get_target_position()
+        return self._try_use_target(target_position)
 
     # Private Methods - Action Helpers
     def _get_target_position(self) -> Position:
         """Calculates the grid position directly in front of the player.
         Uses player position and facing direction to determine target."""
-        px, py = self.position
-        dx, dy = self.facing.value
-        return (px + dx, py + dy)
+        player_x, player_y = self.position
+        delta_x, delta_y = self.facing.value
+        return (player_x + delta_x, player_y + delta_y)
 
-    def _try_use_target(self, target_pos: Position) -> bool:
+    def _try_use_target(self, target_position: Position) -> bool:
         """Attempts to interact with a cell at the target position.
         Returns True if the cell had a usable action."""
-        target_cell = self.world.grid.get(target_pos)
+        target_cell = self.world.grid.get(target_position)
         if hasattr(target_cell, 'use'):
             target_cell.use(self.world)
             return True

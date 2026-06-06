@@ -102,10 +102,9 @@ class ActionHandler:
     # Private Methods - Action Execution
     def _get_target_position(self) -> Optional[Position]:
         """Calculates position in front of player."""
-
-        px, py = self.player.position
-        dx, dy = self.player.facing.value
-        return (px + dx, py + dy)
+        player_x, player_y = self.player.position
+        facing_delta_x, facing_delta_y = self.player.facing.value
+        return (player_x + facing_delta_x, player_y + facing_delta_y)
 
     def _attempt_action(self) -> bool:
         """Attempts to execute an action and updates state.

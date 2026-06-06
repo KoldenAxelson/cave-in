@@ -59,12 +59,6 @@ class Game:
             self._initialize_game()
             self._main_loop()
 
-    # Private Methods - AI Control
-    def _set_ai_controller(self, controller) -> None:
-        """Assigns a new AI controller to the game instance.
-        Allows dynamic switching of AI behavior during gameplay."""
-        self.ai_controller = controller
-
     # Private methods supporting run()
     def _handle_menu(self) -> bool:
         """Manages the start menu interaction flow.
@@ -82,8 +76,8 @@ class Game:
             self._create_core_components()
             self._setup_window()
             self._configure_ai()
-        except pygame.error as e:
-            raise GameInitError(f"Failed to initialize game: {e}")
+        except pygame.error as error:
+            raise GameInitError(f"Failed to initialize game: {error}")
 
     def _main_loop(self) -> None:
         """Drives the core game loop.
@@ -91,7 +85,7 @@ class Game:
         the game world until the game ends."""
         while self.running:
             self._handle_events()
-            self.world.update()
+            self._update()
             self._render()
 
     # Initialize helpers
@@ -127,28 +121,28 @@ class Game:
     # Game loop helpers
     def _handle_events(self) -> None:
         """Processes game events and user input.
-        Manages quit events and handles game restart requests, reinitializing
-        the game when needed."""
+        Handles only the window-close event here; gameplay state transitions
+        live in _update()."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 return
 
+    def _update(self) -> None:
+        """Advances the game state by one frame.
+        Restarting (ESC) is allowed at any time. While the game is over the
+        world stops updating until a restart is requested."""
         if should_restart():
             self._initialize_game()
             self.game_over = False
+            return
 
-    def _update(self) -> None:
-        """Updates the game state.
-        Manages world updates and checks for game-over conditions,
-        handling restart requests when appropriate."""
-        if not self.game_over:
-            self.world.update()
-            if self.world.is_board_full():
-                self.game_over = True
-        elif should_restart():
-            self._initialize_game()
-            self.game_over = False
+        if self.game_over:
+            return
+
+        self.world.update()
+        if self.world.is_board_full():
+            self.game_over = True
 
     def _render(self) -> None:
         """Handles game rendering and frame timing.
