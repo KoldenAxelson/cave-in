@@ -7,13 +7,13 @@ poke around and see how a simple game is put together.
 
 ## Overview
 
-Cave In can run in two ways:
+Cave In can run in three ways, selectable from the start menu:
 
 - **Normal Mode** — you play with the keyboard.
-- **Path Finder** — an AI takes over and tries to collect sticks on its own.
-
-There is also a longer-term idea (see below) of adding a learning-based AI, but
-that part does not exist yet.
+- **Path Finder** — a hand-written search AI collects sticks on its own.
+- **Neural Net** — a neural network that *learns* to play through practice
+  (reinforcement learning). You train it yourself; see
+  [Machine-learning controller](#machine-learning-controller) below.
 
 ## Game Mechanics
 
@@ -65,8 +65,10 @@ job, which makes the code easier to follow:
   helps place rocks safely.
 - **`src/ai/`** — the AI side. `ai_interface.py` is an abstract base class that
   any AI must implement (so the game does not care which AI it is talking to).
-  `ai/pathfinding/` is the one real implementation: `PathFinder` decides moves,
-  and the `path_calculator/` subpackage does the actual route finding and scoring.
+  `ai/pathfinding/` is the search-based `PathFinder` (its `path_calculator/`
+  subpackage does the route finding and scoring). `ai/learning/` is the
+  neural-network agent: the training environment, the network ("the brain"),
+  the trainer, brain save/load, and the play-time controller.
 
 `main.py` at the project root just creates a `Game` and runs it.
 
@@ -93,12 +95,55 @@ because its decision-making hasn't been formally checked for optimality and a
 couple of internal pieces are worth revisiting (see Known Issues). Treat it as a
 solid learning example of pathfinding rather than a tuned, finished AI.
 
-### Neural Network mode (planned, not started)
+### Neural Net
 
-A machine-learning AI that *learns* to play (rather than following hand-written
-pathfinding rules) is an idea for the future. None of it is implemented yet —
-there is no training code and no neural-network mode in the menu. It is listed
-here only to show where the project might go.
+A reinforcement-learning agent that learns to play by practising, rather than
+following hand-written rules. It sees the raw board and chooses raw moves
+(up/down/left/right or "use") — there is no pathfinding involved, so it has to
+discover navigation on its own. See
+[Machine-learning controller](#machine-learning-controller) for how to train and
+run it.
+
+## Machine-learning controller
+
+This is an optional, more advanced part of the project. The full design — written
+for people new to machine learning, with the concepts explained — is in
+[docs/ML_CONTROLLER_PLAN.md](docs/ML_CONTROLLER_PLAN.md).
+
+**Extra dependencies** (not needed for Normal/Path Finder play):
+
+```bash
+pip install -r requirements-ml.txt   # numpy + PyTorch (CPU is fine)
+```
+
+**1. Train a brain.** This runs headless (no window), plays thousands of games,
+and saves the learned network ("the brain") to `models/cave_in_dqn.pt`. You can
+quit and resume any time — progress is checkpointed.
+
+```bash
+python tools/train_dqn.py --episodes 2000      # train from scratch
+python tools/train_dqn.py --resume             # continue an existing brain
+```
+
+Watch the printed `avg reward` and `avg sticks` climb as it learns. (Training
+takes a while on CPU; the agent spends the early episodes mostly exploring.)
+
+**2. Evaluate it** against the path finder on identical boards:
+
+```bash
+python tools/evaluate_agents.py --seeds 50
+```
+
+**3. Play it.** Choose **Neural Net** in the start menu. It loads the saved brain
+automatically (and plays randomly if you haven't trained one yet).
+
+How it learns, briefly: it earns reward for collecting sticks, a small penalty
+per step (so it prefers shorter routes), and a policy-preserving nudge toward the
+nearest stick to speed up learning. The trainer uses standard Deep Q-Network
+techniques (experience replay, epsilon-greedy exploration, a target network).
+The brain trains under whatever `STICK_COUNT` / board settings are in `config.py`,
+and a saved brain records those settings so it won't be loaded against a
+mismatched board.
 
 ## Technical Details
 
@@ -112,8 +157,10 @@ here only to show where the project might go.
 ## Running the Tests
 
 The project has a `pytest` suite covering the pure game logic — movement rules,
-pathfinding/BFS, the flood-fill safety check, position scoring, and stat
-formatting. The tests run headless (no window opens), so they work anywhere.
+pathfinding/BFS, the flood-fill safety check, position scoring, stat formatting —
+plus the ML pieces (training environment, network, brain save/load). The tests
+run headless (no window opens), so they work anywhere. The ML tests skip
+automatically if PyTorch isn't installed.
 
 ```bash
 source venv/bin/activate   # if not already active
@@ -138,7 +185,9 @@ used throughout the project.
   the binary search over rock count in `grid_scanner.py` (its scoring may not be
   monotonic in the way binary search assumes), and the full path recomputation
   every frame in `pathfinder.update()`.
-- The Neural Network mode mentioned above is not implemented.
+- **Neural Net needs training first.** Until you run `tools/train_dqn.py`, the
+  Neural Net menu option plays on a random (untrained) network and performs
+  poorly. How good it gets after training depends on how long you train.
 
 ## Contributing
 
