@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Any
 import time
 from src.cells import Stick, Rock
-from src.utils.config import Position, PLAYER_MOVE_COOLDOWN
+from src.utils.config import Position, PLAYER_MOVE_COOLDOWN, ROCK_REMOVAL_COST
 from src.utils.player_interface import PlayerInterface
 
 @dataclass
@@ -72,9 +72,9 @@ class ActionHandler:
 
     def _can_remove_rock(self, target_pos: Position) -> bool:
         """Validates if rock removal is possible.
-        Checks stick availability and path relevance."""
-        can_remove = (self.world.stats and 
-                    self.world.stats.sticks_collected > 0 and 
+        Checks the rock is on our path and we can afford the stick cost."""
+        can_remove = (self.world.stats and
+                    self.world.stats.sticks_collected >= ROCK_REMOVAL_COST and
                     target_pos in self.current_path)
         return can_remove
 

@@ -6,6 +6,7 @@ These build small, exact boards and assert on the paths the search returns.
 import pytest
 
 from src.ai.pathfinding.path_calculator.path_calculator import PathCalculator
+from src.utils.config import ROCK_REMOVAL_COST
 
 
 def is_contiguous(path):
@@ -95,11 +96,22 @@ class TestFindSticks:
 
 
 class TestFindPathToPosition:
-    def test_respects_stick_budget_for_rock_removal(self, make_world):
-        # With 0 sticks collected the rock-blocked target forces a detour;
-        # find_path_to_position uses sticks_collected as its rock budget.
-        world = make_world(player_pos=(0, 0), rocks=[(1, 0)], sticks=0)
+    # find_path_to_position derives its rock budget from sticks:
+    # affordable removals == sticks_collected // ROCK_REMOVAL_COST.
+
+    def test_cannot_afford_removal_forces_detour(self, make_world):
+        # One short of the cost -> budget 0 -> must go around the rock.
+        world = make_world(player_pos=(0, 0), rocks=[(1, 0)],
+                           sticks=ROCK_REMOVAL_COST - 1)
         calculator = PathCalculator(world)
         path = calculator.find_path_to_position((2, 0))
         assert path is not None
-        assert (1, 0) not in path      # couldn't afford to remove the rock
+        assert (1, 0) not in path
+
+    def test_can_afford_one_removal_routes_through(self, make_world):
+        # Exactly the cost -> budget 1 -> shortest route may go through the rock.
+        world = make_world(player_pos=(0, 0), rocks=[(1, 0)],
+                           sticks=ROCK_REMOVAL_COST)
+        calculator = PathCalculator(world)
+        path = calculator.find_path_to_position((2, 0))
+        assert path == [(0, 0), (1, 0), (2, 0)]

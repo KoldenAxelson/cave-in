@@ -3,7 +3,7 @@
 import pytest
 
 from src.cells import Cell, Rock, Stick, Player
-from src.utils.config import Direction, GRID_SIZE
+from src.utils.config import Direction, GRID_SIZE, ROCK_REMOVAL_COST
 
 
 class TestBaseCell:
@@ -17,19 +17,27 @@ class TestBaseCell:
 
 
 class TestRock:
-    def test_use_removes_rock_and_spends_stick(self, make_world):
-        world = make_world(player_pos=(0, 0), rocks=[(3, 3)], sticks=1)
+    # Expectations are derived from ROCK_REMOVAL_COST so these stay correct if
+    # the removal cost is retuned in config.
+    def test_use_removes_rock_and_spends_full_cost(self, make_world):
+        world = make_world(player_pos=(0, 0), rocks=[(3, 3)], sticks=ROCK_REMOVAL_COST)
         rock = world.grid[(3, 3)]
         rock.use(world)
         assert world.stats.sticks_collected == 0
         assert type(world.grid[(3, 3)]) is Cell   # rock replaced by empty cell
 
-    def test_use_does_nothing_without_a_stick(self, make_world):
-        world = make_world(player_pos=(0, 0), rocks=[(3, 3)], sticks=0)
+    def test_use_does_nothing_without_enough_sticks(self, make_world):
+        insufficient = ROCK_REMOVAL_COST - 1      # one short of the cost
+        world = make_world(player_pos=(0, 0), rocks=[(3, 3)], sticks=insufficient)
         rock = world.grid[(3, 3)]
         rock.use(world)
-        assert isinstance(world.grid[(3, 3)], Rock)  # still there
-        assert world.stats.sticks_collected == 0
+        assert isinstance(world.grid[(3, 3)], Rock)            # still there
+        assert world.stats.sticks_collected == insufficient    # nothing spent
+
+    def test_use_spends_only_the_cost_when_richer(self, make_world):
+        world = make_world(player_pos=(0, 0), rocks=[(3, 3)], sticks=ROCK_REMOVAL_COST + 3)
+        world.grid[(3, 3)].use(world)
+        assert world.stats.sticks_collected == 3
 
 
 class TestStick:
@@ -101,7 +109,7 @@ class TestPlayerHelpers:
 
 class TestPlayerUseFacingCell:
     def test_uses_rock_in_front(self, make_world):
-        world = make_world(player_pos=(5, 5), rocks=[(6, 5)], sticks=1)
+        world = make_world(player_pos=(5, 5), rocks=[(6, 5)], sticks=ROCK_REMOVAL_COST)
         player = world.player
         player.facing = Direction.RIGHT
         assert player.try_use_facing_cell(world) is True

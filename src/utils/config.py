@@ -71,6 +71,15 @@ WINDOW_WIDTH:       int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE  # Total window widt
 GAME_WINDOW_HEIGHT: int = (VIEW_RADIUS * 2 + 1) * CELL_SIZE  # Height of game area
 WINDOW_HEIGHT:      int = GAME_WINDOW_HEIGHT + SCORE_HEIGHT  # Total window height
 
+# Gameplay Rules
+# -------------
+# How many sticks it costs to remove one rock. Kept at 1: removing a rock frees a
+# cell that later yields the stick back, so the stick count is conserved and the
+# game is effectively scored on step count alone. (Raising this above 1 makes
+# removal "lossy" and turns stick-hoarding into a competing objective, but it can
+# also let a greedy agent bankrupt itself, so we keep it simple at 1.)
+ROCK_REMOVAL_COST: int = 1
+
 # AI Configuration
 # --------------
 # Settings for AI behavior

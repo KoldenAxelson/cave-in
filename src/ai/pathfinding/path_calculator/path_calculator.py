@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Callable, Any
-from src.utils.config import Position, Direction, PathType
+from src.utils.config import Position, Direction, PathType, ROCK_REMOVAL_COST
 from .grid_analyzer import GridAnalyzer
 from .path_search import PathSearch
 from src.cells import Stick
@@ -39,9 +39,13 @@ class PathCalculator:
     ) -> Optional[List[Position]]:
         """Find path to target position using optional heuristic for path scoring."""
         start_pos = self.world.player.position
-        # We can remove at most as many rocks as we have sticks collected; with no
-        # stats available, allow unlimited removals
-        max_rocks = self.world.stats.sticks_collected if self.world.stats else float('inf')
+        # Each rock costs ROCK_REMOVAL_COST sticks, so the number we can afford to
+        # remove is the stick balance divided by that cost. With no stats
+        # available, allow unlimited removals.
+        max_rocks = (
+            self.world.stats.sticks_collected // ROCK_REMOVAL_COST
+            if self.world.stats else float('inf')
+        )
 
         return self.path_search.breadth_first_search(
             start_pos, 

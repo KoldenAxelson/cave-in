@@ -28,7 +28,8 @@ class Renderer:
         self._draw_world(surface, world)
 
         if world.is_board_full():
-            self._draw_game_over(surface, world.stats.tiles_moved if world.stats else 0)
+            moves = world.stats.tiles_moved if world.stats else 0
+            self._draw_game_over(surface, moves)
 
         self.screen.blit(surface, (0, 0))
         pygame.display.flip()
@@ -106,22 +107,23 @@ class Renderer:
         surface.blit(overlay, (0, 0))
 
     def _draw_game_over_text(self, surface: pygame.Surface, moves: int) -> None:
-        """Renders the game over message and restart instructions."""
-        game_over_text = f"Cave In! Moves: {moves}"
-        restart_text = "Press ESC to restart"
-        
-        game_over_surface = self.font.render(game_over_text, True, Color.WHITE.value)
-        restart_surface = self.font.render(restart_text, True, Color.WHITE.value)
-        
-        game_over_rect = game_over_surface.get_rect(
-            center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20)
-        )
-        restart_rect = restart_surface.get_rect(
-            center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 20)
-        )
-        
-        surface.blit(game_over_surface, game_over_rect)
-        surface.blit(restart_surface, restart_rect)
+        """Renders the game over summary (move count) and restart prompt.
+        Lines are stacked and centered so they fit the narrow window."""
+        lines = [
+            "Cave In!",
+            f"Moves: {moves}",
+            "Press ESC to restart",
+        ]
+        line_height = 30
+        # Center the block of lines vertically around the middle of the window.
+        first_line_y = WINDOW_HEIGHT // 2 - (len(lines) - 1) * line_height // 2
+
+        for line_index, text in enumerate(lines):
+            text_surface = self.font.render(text, True, Color.WHITE.value)
+            text_rect = text_surface.get_rect(
+                center=(WINDOW_WIDTH // 2, first_line_y + line_index * line_height)
+            )
+            surface.blit(text_surface, text_rect)
 
     # Utility methods
     def _get_screen_position(self, world_pos: Position, view_start: Position) -> Position:

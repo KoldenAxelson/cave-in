@@ -19,10 +19,12 @@ that part does not exist yet.
 
 1. Move around a grid-based cave.
 2. Collect sticks (brown squares) to increase your score.
-3. Spend a stick to remove a rock (gray square) blocking your path.
+3. Spend a stick to remove a rock (gray square) blocking your path. The cost is
+   set by `ROCK_REMOVAL_COST` (1 by default).
 4. Plan carefully — if you box yourself in, the game ends.
 
-The goal is to keep going as long as you can before the cave traps you.
+The cave-in (a full board) is inevitable; the goal is to reach it in as few
+steps as possible.
 
 ## Getting Started
 
@@ -44,7 +46,7 @@ between options and Enter to choose one.
 ## Controls
 
 - **W / A / S / D** — move up / left / down / right
-- **Space** — use a stick to remove the rock you are facing
+- **Space** — spend a stick to remove the rock you are facing
 - **Esc** — restart the game (to quit, close the window)
 
 ## How It Works (a quick tour for learners)

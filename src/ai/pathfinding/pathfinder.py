@@ -79,7 +79,7 @@ class PathFinder(AIInterface):
         if not target_stick:
             self._clear_paths()
             return
-        
+
         self._find_and_set_path(target_stick)
 
     def _find_and_set_path(self, target_stick: Position) -> None:
@@ -87,12 +87,15 @@ class PathFinder(AIInterface):
         if path := self.path_calculator.find_path_without_rocks(target_stick):
             self._set_paths(path)
             return
-        
+
         visible_target = self.grid_scanner.find_best_visible_position(
-            self.player.position, 
+            self.player.position,
             target_stick
         )
-        
+        if visible_target is None:
+            self._clear_paths()
+            return
+
         self._find_optimal_path_with_rocks(visible_target)
 
     def _find_optimal_path_with_rocks(self, target_pos: Position) -> None:
@@ -119,14 +122,20 @@ class PathFinder(AIInterface):
 
         return self.path_calculator.find_path_to_position(target_pos, heuristic=momentum_heuristic)
 
-    def _optimize_path_with_rocks(self, path: List[Position], target_pos: Position) -> None:
+    def _optimize_path_with_rocks(self, path: Optional[List[Position]], target_pos: Position) -> None:
         """Optimize path by potentially finding alternative with fewer rocks."""
+        # No reachable path (e.g. target walled off beyond our budget): idle this
+        # frame and try again next frame rather than crashing on a None path.
+        if not path:
+            self._clear_paths()
+            return
+
         rocks_in_path = self.path_calculator.count_rocks_in_path(path)
-        
+
         if rocks_in_path == 0:
             self._set_paths(path)
             return
-            
+
         if alternative := self.grid_scanner.find_best_alternative_path(
             rocks_in_path,
             target_pos,
