@@ -68,17 +68,20 @@ Here's the payoff. The game often does this when the player presses Space:
 target_cell.use(world)
 ```
 
-It doesn't check "is this a rock or a stick?" first. It just calls `use`, and
-**each cell type runs its own version**:
+It doesn't check "is this a rock or something else?" first. It just calls `use`,
+and **each cell type runs its own version**:
 
-- a `Rock`'s `use` clears the rock,
-- a `Stick`'s `use` collects it,
-- a plain `Cell`'s `use` does nothing.
+- a `Rock`'s `use` clears the rock (if you can afford it),
+- a plain `Cell`'s `use` does nothing,
+- a `Stick`'s `use` also does nothing — sticks are collected by *walking onto
+  them* (in `Player._perform_move`), not by the use action.
 
 This is **polymorphism** ("many shapes"): one instruction, many behaviors
 depending on the object's actual type. It's what lets the game add new cell types
 later without rewriting the code that uses them — a new cell just needs its own
-`use`.
+`use`. (It's also a design judgment call: sticks *could* have used `use`, but
+walking-onto-them turned out to be simpler for both players and the learning
+agent.)
 
 ## A subtle point: `type(cell) == Cell` vs `isinstance`
 
@@ -98,8 +101,9 @@ the kind of detail OOP forces you to think about.
    print(isinstance(r, Cell))   # True  — a Rock is a Cell
    print(type(r) == Cell)       # False — but it's not a *plain* Cell
    ```
-2. Read `stick.py`'s `use`. It does three things in order — what are they? (Notice
-   it triggers a *new* stick to appear elsewhere.)
+2. Read `Player._perform_move` in `player.py` and find the part that collects a
+   stick. What three things happen when you step onto one? (Notice it triggers a
+   *new* stick to appear elsewhere.)
 3. Imagine a new cell type `Gem` worth bonus points. Which methods would you
    override, and which would you inherit unchanged?
 

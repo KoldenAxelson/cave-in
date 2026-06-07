@@ -98,24 +98,30 @@ they're all tunable.
 
 ### 3.1 Observation — what the agent sees
 
-The whole board, encoded as a few 10×10 grids of 0s and 1s ("layers"):
+**Digested features**, not a raw grid. Because we know the exact board, we hand
+the network information it can use directly:
 
-- Layer 1: a 1 where the **player** is, 0 elsewhere.
-- Layer 2: a 1 in every **rock** cell.
-- Layer 3: a 1 in every **stick** cell.
+- the player's own position (normalized),
+- how many sticks it currently holds,
+- for each of the few nearest sticks: its (dx, dy) offset from the player and its
+  distance (so it can see which way to go and choose between sticks),
+- a small local patch marking nearby rocks and walls (for routing around
+  obstacles).
 
-Plus a couple of plain numbers: **sticks currently held** and maybe **fraction of
-the board filled**. This is a faithful, complete picture of the game and is easy
-to explain. (It's the same trick image-based game AIs use: represent the screen
-as stacked grids of numbers.)
+About 37 numbers. (An earlier design fed the whole board as three 10×10 grids —
+an image-like ~300-number input — but the agent couldn't learn from it: a plain
+network struggles to re-derive geometry from a flat grid. Switching to features
+it could use directly was what made learning work. Telling the agent *where*
+things are is perception; it still has to learn *what to do* — that's not
+cheating.)
 
 ### 3.2 Actions — what the agent can do
 
 Five discrete choices per turn: **move up, move down, move left, move right, or
-use the faced cell** (collect a stick / clear a rock). The controller turns the
-chosen action into the `get_movement()` / `should_use_action()` answers the game
-already expects, so it slots into the existing `AIInterface` with no changes to
-the game.
+use the faced cell**. A stick is collected simply by moving onto it; the use
+action only clears rocks. The controller turns the chosen action into the
+`get_movement()` / `should_use_action()` answers the game already expects, so it
+slots into the existing `AIInterface` with no changes to the game.
 
 ### 3.3 Reward — how we define "good play" (researched)
 

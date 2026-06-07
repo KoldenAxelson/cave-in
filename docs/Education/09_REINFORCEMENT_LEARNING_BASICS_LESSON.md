@@ -49,21 +49,27 @@ problem.
 
 ### Observation — what the agent sees
 
-```python
-OBSERVATION_SIZE = 3 * GRID_SIZE * GRID_SIZE + 2
-```
+The agent is given **digested features**, not a raw grid. Because we know the
+exact board, we hand it information that's already useful: where the nearest
+sticks are *relative to the player* (so it can see which way to go and choose
+between them), how many sticks it holds, and a small patch of nearby rocks/walls
+(so it can route around obstacles). About 37 numbers, all roughly 0–1.
 
-The board is encoded as three 10×10 grids of 0s and 1s — one marking the player,
-one the rocks, one the sticks — plus two extra numbers (sticks held, how full the
-board is). 302 numbers total. That's the board expressed as something math can
-chew on. (This is the same trick used to feed video-game screens to AIs: turn the
-picture into stacked grids of numbers.)
+This is a deliberate, important choice. An earlier version dumped the whole board
+as three 10×10 grids of 0s and 1s (a "raw" image-like input, ~300 numbers) — and
+the agent failed to learn, because a plain network struggles to re-derive "which
+way is the nearest stick" from a flat grid. Switching to features it could
+actually use was the difference between *not learning* and *learning*. The lesson:
+**how you present the problem (the representation) often matters more than the
+learning algorithm.** Crucially, telling the agent *where* things are is fair —
+it still has to learn *what to do* about them.
 
 ### Action — what it can do
 
-Five choices: move up, right, down, left, or **use** the faced cell. The agent only
-ever outputs one of these per turn. Crucially, it gets the **raw** board and emits
-**raw** moves — no pathfinding, no shortcuts. It has to learn navigation from
+Five choices: move up, right, down, left, or **use** the faced cell. A stick is
+collected simply by **moving onto it**; the use action only clears rocks. The agent
+only ever outputs one of these per turn. Crucially, it gets the **raw** board and
+emits **raw** moves — no pathfinding, no shortcuts. It has to learn navigation from
 scratch.
 
 ### Reward — how we define "good"

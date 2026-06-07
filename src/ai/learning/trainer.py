@@ -38,18 +38,20 @@ from src.ai.learning import storage
 class TrainConfig:
     """All training knobs in one place (sensible defaults for a 10x10 board)."""
     episodes: int = 500
-    max_steps: int = 2000          # safety cap per game
+    max_steps: int = 1000          # safety cap per game (shorter = more, fresher episodes)
     stick_count: int = 3
 
     gamma: float = 0.99            # how much future reward counts (matches env shaping)
-    learning_rate: float = 1e-3
+    learning_rate: float = 2.5e-4  # lower = steadier; high rates make DQN diverge
     buffer_capacity: int = 50_000
     batch_size: int = 64
     min_replay: int = 1_000        # don't learn until the memory has this many transitions
 
     epsilon_start: float = 1.0     # start fully exploratory...
     epsilon_end: float = 0.05      # ...end mostly exploiting what's learned
-    epsilon_decay_steps: int = 50_000
+    # Decay slowly: with ~1000-step episodes this keeps meaningful exploration for
+    # a few hundred episodes instead of shutting off after ~25.
+    epsilon_decay_steps: int = 300_000
 
     target_update: int = 1_000     # copy online->target every this many steps
 
@@ -83,16 +85,25 @@ def learn_step(online, target, optimizer, buffer, batch_size, gamma) -> float:
     predicted_q = online(observations).gather(1, actions).squeeze(1)
 
     # What it *should* have predicted: the reward plus the best achievable value
-    # from the next state (estimated by the stable target network). If the game
-    # ended (done=1), there is no future, so that term drops out.
+    # from the next state. If the game ended (done=1), there is no future, so that
+    # term drops out.
     with torch.no_grad():
-        best_next_q = target(next_observations).max(dim=1).values
+        # Double DQN: choose the next action with the ONLINE network but score it
+        # with the TARGET network. Plain DQN takes the max with one network, which
+        # systematically over-estimates values and is a common cause of the
+        # "reward keeps getting worse" divergence.
+        next_actions = online(next_observations).argmax(dim=1, keepdim=True)
+        best_next_q = target(next_observations).gather(1, next_actions).squeeze(1)
         td_target = rewards + gamma * best_next_q * (1.0 - dones)
 
-    loss = nn.functional.mse_loss(predicted_q, td_target)
+    # Huber loss is gentler than plain squared error on the occasional huge
+    # mistake, which keeps training stable.
+    loss = nn.functional.smooth_l1_loss(predicted_q, td_target)
 
     optimizer.zero_grad()
     loss.backward()
+    # Clip gradients so a single bad batch can't blow the weights up.
+    torch.nn.utils.clip_grad_norm_(online.parameters(), max_norm=10.0)
     optimizer.step()
     return float(loss.item())
 
@@ -135,6 +146,9 @@ def train(config: TrainConfig) -> list:
     recent_sticks = deque(maxlen=50)
     recent_steps = deque(maxlen=50)
     history = []
+    # DQN can peak and then drift downward, so we keep the BEST brain seen (by
+    # recent average reward), not just the latest one.
+    best_avg_reward = float("-inf")
 
     for episode in range(start_episode, start_episode + config.episodes):
         observation = env.reset()
@@ -172,21 +186,31 @@ def train(config: TrainConfig) -> list:
         })
 
         if (episode + 1) % config.log_every == 0:
+            avg_reward = float(np.mean(recent_rewards))
+            # Save only when this is a new best (and we have a stable enough
+            # window to judge), so a late-training slump can't overwrite our
+            # best brain.
+            is_best = len(recent_rewards) >= 10 and avg_reward > best_avg_reward
+            if is_best:
+                best_avg_reward = avg_reward
+                storage.save_brain(config.save_path, online, optimizer,
+                                   episode=episode + 1, epsilon=epsilon, metadata=metadata)
             print(
                 f"ep {episode + 1:>5} | "
-                f"avg reward {np.mean(recent_rewards):7.2f} | "
+                f"avg reward {avg_reward:7.2f} | "
                 f"avg sticks {np.mean(recent_sticks):5.1f} | "
                 f"avg steps {np.mean(recent_steps):7.1f} | "
                 f"epsilon {epsilon:.3f} | buffer {len(buffer)}"
+                f"{'   <- new best, saved' if is_best else ''}"
             )
 
-        if (episode + 1) % config.save_every == 0:
-            storage.save_brain(config.save_path, online, optimizer,
-                               episode=episode + 1, epsilon=epsilon, metadata=metadata)
-
-    # Final save.
-    storage.save_brain(config.save_path, online, optimizer,
-                       episode=start_episode + config.episodes,
-                       epsilon=_linear_epsilon(global_step, config), metadata=metadata)
-    print(f"Training done. Brain saved to {config.save_path}.")
+    # Short runs may never reach a 'best' window; make sure something is saved.
+    if best_avg_reward == float("-inf"):
+        storage.save_brain(config.save_path, online, optimizer,
+                           episode=start_episode + config.episodes,
+                           epsilon=_linear_epsilon(global_step, config), metadata=metadata)
+        print(f"Training done. Brain saved to {config.save_path}.")
+    else:
+        print(f"Training done. Best brain (avg reward {best_avg_reward:.2f}) "
+              f"saved to {config.save_path}.")
     return history

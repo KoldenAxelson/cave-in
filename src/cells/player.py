@@ -5,6 +5,7 @@ import time
 import pygame
 # Local imports
 from .cell import Cell
+from .stick import Stick
 from src.utils.config import Color, GRID_SIZE, PLAYER_MOVE_COOLDOWN
 from src.utils.config import Position, ColorType, Direction, CameraMode
 from src.utils.input_handler import get_movement, use_action
@@ -101,25 +102,37 @@ class Player(Cell):
 
     def _is_valid_move(self, world, target_position: Position) -> bool:
         """Validates if a move to the target position is allowed.
-        Checks for collisions and ensures target is an empty cell."""
+        Walkable targets are empty floor (a plain Cell) or a Stick — stepping
+        onto a stick collects it (see _perform_move). Rocks block movement and
+        must be cleared with an action instead."""
         target_cell = world.grid[target_position]
-        # `type(...) == Cell` (not isinstance) deliberately rejects subclasses
-        # like Rock/Stick: only a plain empty Cell is walkable.
-        return (target_position != self.position and
-                isinstance(target_cell, Cell) and
-                type(target_cell) == Cell)
+        if target_position == self.position:
+            return False
+        # `type(...) is Cell` matches only a plain empty cell, not Rock/Player;
+        # Stick is allowed explicitly because we collect it by walking onto it.
+        return type(target_cell) is Cell or isinstance(target_cell, Stick)
 
     def _perform_move(self, world, target_position: Position) -> None:
         """Executes the movement to a new position.
-        Updates grid state, position, and movement statistics."""
+        Updates grid state and movement stats, and collects a stick if we just
+        stepped onto one."""
+        target_cell = world.grid[target_position]
+
         # Leave behind an empty cell where the player was standing.
         world.grid[self.position] = Cell(self.position)
         self.position = target_position
         world.grid[target_position] = self
         self.last_move_time = time.time()
-        
+
         if world.stats:
             world.stats.tiles_moved += 1
+
+        # Stepping onto a stick collects it. The player already occupies this
+        # cell now, so the replacement stick can't spawn on top of us.
+        if isinstance(target_cell, Stick):
+            if world.stats:
+                world.stats.sticks_collected += 1
+            world._place_random_stick()
 
     # Private Methods - Rendering Helpers
     def _calculate_indicator_position(self, screen_pos: Position, cell_size: int) -> Position:

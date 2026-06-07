@@ -18,9 +18,9 @@ Cave In can run in three ways, selectable from the start menu:
 ## Game Mechanics
 
 1. Move around a grid-based cave.
-2. Collect sticks (brown squares) to increase your score.
-3. Spend a stick to remove a rock (gray square) blocking your path. The cost is
-   set by `ROCK_REMOVAL_COST` (1 by default).
+2. Collect sticks (brown squares) by **walking onto them**.
+3. Spend a stick to remove a rock (gray square) blocking your path — face it and
+   press Space. The cost is set by `ROCK_REMOVAL_COST` (1 by default).
 4. Plan carefully — if you box yourself in, the game ends.
 
 The cave-in (a full board) is inevitable; the goal is to reach it in as few

@@ -76,21 +76,23 @@ Two ideas worth naming:
   common game-feel technique.
 - **Facing.** Moving sets which way the player is facing (`update_facing`). That
   matters because using Space acts on the cell *in front of you*
-  (`try_use_facing_cell`) — so to grab a stick you turn toward it, then use.
+  (`try_use_facing_cell`) — that's how you clear a rock. (Sticks are simpler: you
+  collect one just by walking onto it — see `_perform_move`.)
 
 Finally, `try_move` checks the rules before committing:
 
 ```python
 def _is_valid_move(self, world, target_position) -> bool:
     target_cell = world.grid[target_position]
-    return (target_position != self.position and
-            isinstance(target_cell, Cell) and
-            type(target_cell) == Cell)
+    if target_position == self.position:
+        return False
+    # Empty floor, or a stick (which you collect by stepping onto it).
+    return type(target_cell) is Cell or isinstance(target_cell, Stick)
 ```
 
-You can only step onto a *plain empty cell* (remember `type(...) == Cell` from
-Lesson 3) — not onto a rock or stick. That single rule is what makes rocks
-obstacles and sticks something you "use" rather than walk over.
+You can step onto a *plain empty cell* or a *stick* (walking onto a stick
+collects it — see `_perform_move`), but **not** onto a rock. That one rule is what
+makes rocks obstacles while sticks are things you simply walk over to grab.
 
 ## The full path of one keypress
 

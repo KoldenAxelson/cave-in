@@ -24,7 +24,7 @@ Open `src/ai/learning/network.py`:
 
 ```python
 self.layers = nn.Sequential(
-    nn.Linear(input_size, hidden_size),   # 302 numbers in -> 128
+    nn.Linear(input_size, hidden_size),   # observation features in -> 128
     nn.ReLU(),
     nn.Linear(hidden_size, hidden_size),  # 128 -> 128
     nn.ReLU(),
@@ -36,7 +36,7 @@ self.layers = nn.Sequential(
 - `nn.ReLU` is a tiny rule between layers (`keep positives, zero out negatives`)
   that lets the network learn curvy, non-trivial patterns instead of only straight
   lines.
-- In goes the 302-number observation; out come **5 numbers, one per action.**
+- In goes the observation feature vector; out come **5 numbers, one per action.**
 
 `PyTorch` (the `nn` library) handles the calculus of adjusting the weights for us —
 which is exactly why we use it instead of doing the math by hand.

@@ -55,15 +55,18 @@ class TestReset:
         sticks = sum(1 for c in env.world.grid.values() if isinstance(c, Stick))
         assert sticks == 3
 
-    def test_observation_layers(self):
-        # Player layer has exactly one cell set; stick layer matches stick count.
-        env = CaveInEnv(stick_count=3)
+    def test_observation_encodes_nearest_stick_offset(self):
+        # The feature observation reports the nearest stick as a (dx, dy) offset
+        # relative to the player. Place a known stick and check the offset.
+        env = CaveInEnv(stick_count=1)
         env.reset(seed=1)
-        cells = GRID_SIZE * GRID_SIZE
-        player_layer = env._observation()[:cells]
-        stick_layer = env._observation()[2 * cells:3 * cells]
-        assert player_layer.sum() == 1
-        assert stick_layer.sum() == 3
+        place(env, (5, 5), sticks=[(8, 5)])   # nearest stick 3 cells to the right
+        obs = env._observation()
+        # Layout: [player_x/N, player_y/N, sticks_held, then per-stick dx,dy,dist...]
+        nearest_dx = obs[3]
+        nearest_dy = obs[4]
+        assert nearest_dx == pytest.approx(3 / GRID_SIZE)
+        assert nearest_dy == pytest.approx(0.0)
 
 
 class TestMovement:
@@ -97,16 +100,27 @@ class TestMovement:
         assert env.player.position == (5, 5)
         assert env.player.facing is Direction.RIGHT
 
+    def test_walking_onto_stick_rewards_one(self):
+        # Collection now happens by moving onto a stick, so the +1 is earned here.
+        env = CaveInEnv(step_penalty=0.0, shaping_scale=0.0, stick_reward=1.0)
+        env.reset(seed=0)
+        place(env, (5, 5), sticks=[(6, 5)])
+        before = env.stats.sticks_collected
+        _, reward, _, _ = env.step(MOVE_RIGHT)
+        assert env.player.position == (6, 5)
+        assert env.stats.sticks_collected == before + 1
+        assert reward == pytest.approx(1.0)
+
 
 class TestUseAction:
-    def test_collecting_a_stick_rewards_one(self):
+    def test_using_a_stick_is_not_rewarded(self):
+        # The use action only clears rocks now; facing+using a stick does nothing.
         env = CaveInEnv(step_penalty=0.0, shaping_scale=0.0, stick_reward=1.0)
         env.reset(seed=0)
         place(env, (5, 5), sticks=[(6, 5)], facing=Direction.RIGHT)
-        before = env.stats.sticks_collected
         _, reward, _, _ = env.step(USE)
-        assert env.stats.sticks_collected == before + 1
-        assert reward == pytest.approx(1.0)
+        assert env.stats.sticks_collected == 0
+        assert reward == pytest.approx(0.0)
 
     def test_removing_a_rock_is_legal_but_unrewarded(self):
         env = CaveInEnv(step_penalty=0.0, shaping_scale=0.0)

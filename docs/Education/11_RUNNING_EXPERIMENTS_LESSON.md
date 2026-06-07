@@ -15,7 +15,7 @@ that's too complex to reason about purely in your head.
 ## The big idea: you can't just *think* your way through ML
 
 In the early lessons, you could often reason out what code would do. Once learning,
-randomness, and 302-number observations are involved, intuition gets unreliable
+randomness, and many-number observations are involved, intuition gets unreliable
 fast. The professional habit is to **form a hypothesis, run a measurement, and let
 the data decide** — exactly like a science experiment.
 

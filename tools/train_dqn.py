@@ -40,6 +40,8 @@ def main():
     parser.add_argument("--batch-size", type=int, default=defaults.batch_size)
     parser.add_argument("--min-replay", type=int, default=defaults.min_replay,
                         help="Transitions to collect before learning starts.")
+    parser.add_argument("--epsilon-decay-steps", type=int, default=defaults.epsilon_decay_steps,
+                        help="Steps over which random exploration decays to its floor.")
     parser.add_argument("--save-path", type=str, default=defaults.save_path)
     parser.add_argument("--save-every", type=int, default=defaults.save_every)
     parser.add_argument("--log-every", type=int, default=defaults.log_every)
@@ -55,6 +57,7 @@ def main():
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
         min_replay=args.min_replay,
+        epsilon_decay_steps=args.epsilon_decay_steps,
         save_path=args.save_path,
         save_every=args.save_every,
         log_every=args.log_every,

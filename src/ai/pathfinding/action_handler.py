@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Any
 import time
-from src.cells import Stick, Rock
+from src.cells import Rock
 from src.utils.config import Position, PLAYER_MOVE_COOLDOWN, ROCK_REMOVAL_COST
 from src.utils.player_interface import PlayerInterface
 
@@ -80,12 +80,10 @@ class ActionHandler:
 
     # Private Methods - Action Decision Logic
     def _should_use_action_at(self, target_pos: Position) -> bool:
-        """Determines if action should be used at specific position.
-        Handles different cell types (Stick vs Rock) appropriately."""
+        """Determines if an action should be used at a specific position.
+        The use action only clears rocks now — sticks are collected by walking
+        onto them, so the player never needs to 'use' a stick."""
         target_cell = self.world.grid.get(target_pos)
-
-        if isinstance(target_cell, Stick):
-            return self._attempt_action()
 
         if isinstance(target_cell, Rock):
             return self._should_remove_rock(target_pos)

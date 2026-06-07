@@ -22,7 +22,7 @@ import numpy as np
 from src.core.world import GameWorld
 from src.core.stats import Stats
 from src.cells.player import Player
-from src.cells import Cell, Rock, Stick
+from src.cells import Rock, Stick
 from src.utils.config import GRID_SIZE, Direction, STICK_COUNT
 
 
@@ -41,41 +41,68 @@ _MOVE_DELTAS = {
     MOVE_LEFT: Direction.LEFT.value,
 }
 
-# Three 10x10 layers (player / rocks / sticks) plus two scalars.
-OBSERVATION_SIZE = 3 * GRID_SIZE * GRID_SIZE + 2
+# --- Observation: digested features, not a raw grid -----------------------------
+# We have perfect structured knowledge of the board, so instead of dumping a raw
+# grid and making the network re-derive geometry, we hand it useful, self-relative
+# features: where the nearest sticks are *relative to the player*, and a small
+# local view of nearby obstacles. This is *perception* (where things are), not
+# *policy* (what to do) — the agent still has to learn which stick to chase, when
+# to clear a rock, and how to route.
+NEAREST_STICKS = 3            # report the offset to this many nearest sticks
+LOCAL_VIEW_RADIUS = 2         # a (2r+1)x(2r+1) patch of nearby rocks/walls
+_LOCAL_VIEW_SIZE = (2 * LOCAL_VIEW_RADIUS + 1) ** 2
+
+# 2 (player position) + 1 (sticks held) + 3 per reported stick + local view.
+OBSERVATION_SIZE = 2 + 1 + 3 * NEAREST_STICKS + _LOCAL_VIEW_SIZE
 
 
 def encode_observation(world) -> np.ndarray:
-    """Turn a game world into the fixed-size number vector the network reads.
+    """Turn a game world into the feature vector the network reads.
 
-    This is shared by the training environment and the play-time controller so
-    the brain always sees the exact same format it was trained on. Layout:
-    three 10x10 layers (player, rocks, sticks) flattened, then two scalars
-    (sticks held, fraction of board filled).
+    Shared by the training environment and the play-time controller so the brain
+    always sees the same format it trained on. Features (all roughly 0..1):
+      - the player's own position (normalized),
+      - sticks currently held,
+      - for each of the NEAREST_STICKS closest sticks: its (dx, dy) offset from
+        the player and its distance — so the agent can see which way to go and
+        choose between sticks,
+      - a small local patch marking nearby rocks and walls, so it can route
+        around immediate obstacles.
     """
-    player_layer = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.float32)
-    rock_layer = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.float32)
-    stick_layer = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.float32)
+    player_x, player_y = world.player.position
+    features = [player_x / GRID_SIZE, player_y / GRID_SIZE]
 
-    for (column, row), cell in world.grid.items():
-        if isinstance(cell, Rock):
-            rock_layer[column, row] = 1.0
-        elif isinstance(cell, Stick):
-            stick_layer[column, row] = 1.0
-    player_column, player_row = world.player.position
-    player_layer[player_column, player_row] = 1.0
+    sticks_held = world.stats.sticks_collected if world.stats else 0
+    features.append(sticks_held / (GRID_SIZE * GRID_SIZE))
 
-    cell_count = GRID_SIZE * GRID_SIZE
-    sticks_held = (world.stats.sticks_collected if world.stats else 0) / cell_count
-    non_empty = sum(1 for cell in world.grid.values() if type(cell) is not Cell)
-    filled_fraction = non_empty / cell_count
+    # Nearest sticks, sorted by Manhattan distance, as offsets relative to us.
+    sticks = [pos for pos, cell in world.grid.items() if isinstance(cell, Stick)]
+    sticks.sort(key=lambda s: abs(s[0] - player_x) + abs(s[1] - player_y))
+    for index in range(NEAREST_STICKS):
+        if index < len(sticks):
+            stick_x, stick_y = sticks[index]
+            distance = abs(stick_x - player_x) + abs(stick_y - player_y)
+            features += [
+                (stick_x - player_x) / GRID_SIZE,
+                (stick_y - player_y) / GRID_SIZE,
+                distance / (2 * GRID_SIZE),
+            ]
+        else:
+            features += [0.0, 0.0, 1.0]   # no such stick: neutral / "far away"
 
-    return np.concatenate([
-        player_layer.flatten(),
-        rock_layer.flatten(),
-        stick_layer.flatten(),
-        np.array([sticks_held, filled_fraction], dtype=np.float32),
-    ])
+    # Local obstacle view: 1.0 where there's a rock or the wall (out of bounds).
+    for offset_x in range(-LOCAL_VIEW_RADIUS, LOCAL_VIEW_RADIUS + 1):
+        for offset_y in range(-LOCAL_VIEW_RADIUS, LOCAL_VIEW_RADIUS + 1):
+            cell_position = (player_x + offset_x, player_y + offset_y)
+            in_bounds = (0 <= cell_position[0] < GRID_SIZE
+                         and 0 <= cell_position[1] < GRID_SIZE)
+            if not in_bounds:
+                features.append(1.0)      # wall blocks like a rock
+            else:
+                is_rock = isinstance(world.grid.get(cell_position), Rock)
+                features.append(1.0 if is_rock else 0.0)
+
+    return np.array(features, dtype=np.float32)
 
 
 class CaveInEnv:
@@ -134,7 +161,6 @@ class CaveInEnv:
 
         distance_before = self._nearest_stick_distance()
         reward = self.step_penalty  # a small "living cost" every turn
-        collected = False
 
         if action == USE:
             reward += self._apply_use()
@@ -161,36 +187,35 @@ class CaveInEnv:
 
     # -- Action helpers ---------------------------------------------------------
     def _apply_move(self, action: int) -> float:
-        """Face the chosen direction and try to move. Returns any extra reward."""
+        """Face the chosen direction and try to move. Returns any extra reward.
+        Sticks are collected by stepping onto them, so the +1 reward is earned
+        here, on a successful move onto a stick."""
         delta = _MOVE_DELTAS[action]
         player_x, player_y = self.player.position
         raw_target = (player_x + delta[0], player_y + delta[1])
+        stepping_onto_stick = isinstance(self.world.grid.get(raw_target), Stick)
 
-        # Facing always updates (so the agent can turn toward a stick/rock to use
-        # it next turn), even when the move itself is blocked.
+        # Facing always updates (so the agent can turn toward a rock to clear it
+        # next turn), even when the move itself is blocked.
         self.player.update_facing(delta)
-        self.player.try_move(self.world, delta)
+        moved = self.player.try_move(self.world, delta)
 
+        if moved and stepping_onto_stick:
+            return self.stick_reward      # walked onto a stick -> collected it
         # Only a move into the wall (out of bounds) is "wasted". A move blocked by
-        # a rock/stick still usefully sets facing, so it isn't penalized here.
+        # a rock still usefully sets facing, so it isn't penalized here.
         if not self._in_bounds(raw_target):
             return self.illegal_penalty
         return 0.0
 
     def _apply_use(self) -> float:
-        """Use the faced cell. +reward for collecting a stick; penalty for a no-op."""
-        facing_x, facing_y = self.player.facing.value
-        player_x, player_y = self.player.position
-        target = (player_x + facing_x, player_y + facing_y)
-        faced_a_stick = isinstance(self.world.grid.get(target), Stick)
-
+        """Use the faced cell. The use action only clears rocks now (sticks are
+        collected by walking). No bonus for clearing a rock; penalty for facing a
+        wall."""
         succeeded = self.player.try_use_facing_cell(self.world)
-
-        if succeeded and faced_a_stick:
-            return self.stick_reward      # collected a stick (the goal)
         if not succeeded:
-            return self.illegal_penalty   # faced empty space / unaffordable rock
-        return 0.0                        # legal rock removal (no bonus, costs a step+stick)
+            return self.illegal_penalty   # faced a wall (out of bounds)
+        return 0.0
 
     # -- Observation ------------------------------------------------------------
     def _observation(self) -> np.ndarray:

@@ -28,7 +28,8 @@ from src.ai.learning.environment import OBSERVATION_SIZE, NUM_ACTIONS
 DEFAULT_MODEL_PATH = "models/cave_in_dqn.pt"
 
 # Bump this if the save format changes in an incompatible way.
-BRAIN_FORMAT_VERSION = 1
+# v2: observation changed from a raw grid to digested features.
+BRAIN_FORMAT_VERSION = 2
 
 # These metadata fields MUST match for a saved brain to be usable, because they
 # determine the network's input/output shape. (stick_count and rock_removal_cost

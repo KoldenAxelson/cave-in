@@ -41,13 +41,24 @@ class TestRock:
 
 
 class TestStick:
-    def test_use_collects_and_replaces(self, make_world):
-        world = make_world(player_pos=(0, 0), stick_positions=[(3, 3)])
-        stick = world.grid[(3, 3)]
-        stick.use(world)
+    def test_walking_onto_a_stick_collects_it(self, make_world):
+        # Collection happens by stepping onto the stick, not by using it.
+        world = make_world(player_pos=(5, 5), stick_positions=[(6, 5)])
+        player = world.player
+        player.move_cooldown = 0
+        assert player.try_move(world, (1, 0)) is True
+        assert player.position == (6, 5)
+        assert world.grid[(6, 5)] is player          # player now stands there
         assert world.stats.sticks_collected == 1
         # A replacement stick is spawned elsewhere, so the board still has one.
         assert any(isinstance(cell, Stick) for cell in world.grid.values())
+
+    def test_using_a_faced_stick_does_nothing(self, make_world):
+        # The use action is for rocks now; using a stick is a no-op.
+        world = make_world(player_pos=(0, 0), stick_positions=[(3, 3)])
+        world.grid[(3, 3)].use(world)
+        assert world.stats.sticks_collected == 0
+        assert isinstance(world.grid[(3, 3)], Stick)  # still there
 
 
 class TestPlayerMovement:
@@ -72,12 +83,13 @@ class TestPlayerMovement:
         assert player.position == (5, 5)
         assert world.stats.tiles_moved == 0
 
-    def test_cannot_move_into_stick(self, make_world):
+    def test_can_move_onto_stick_and_collect(self, make_world):
         world = make_world(player_pos=(5, 5), stick_positions=[(6, 5)])
         player = self._player(world)
-        # Only plain empty cells are walkable; a stick must be used, not stepped on.
-        assert player.try_move(world, (1, 0)) is False
-        assert player.position == (5, 5)
+        # Sticks are walkable now — stepping onto one collects it.
+        assert player.try_move(world, (1, 0)) is True
+        assert player.position == (6, 5)
+        assert world.stats.sticks_collected == 1
 
     def test_move_into_wall_is_blocked(self, make_world):
         world = make_world(player_pos=(0, 0))
@@ -116,9 +128,11 @@ class TestPlayerUseFacingCell:
         assert type(world.grid[(6, 5)]) is Cell
         assert world.stats.sticks_collected == 0
 
-    def test_uses_stick_in_front(self, make_world):
+    def test_using_a_faced_stick_does_not_collect(self, make_world):
+        # Sticks are collected by walking onto them; using one does nothing.
         world = make_world(player_pos=(5, 5), stick_positions=[(6, 5)])
         player = world.player
         player.facing = Direction.RIGHT
-        assert player.try_use_facing_cell(world) is True
-        assert world.stats.sticks_collected == 1
+        player.try_use_facing_cell(world)
+        assert world.stats.sticks_collected == 0
+        assert isinstance(world.grid[(6, 5)], Stick)  # still there
